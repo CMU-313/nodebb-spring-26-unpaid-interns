@@ -12,6 +12,7 @@ const plugins = require('./plugins');
 const privileges = require('./privileges');
 const activitypub = require('./activitypub');
 const utils = require('./utils');
+const synonyms = require('./synonyms');
 
 const search = module.exports;
 
@@ -227,7 +228,8 @@ async function filterAndSort(pids, data) {
 		!data.hasTags &&
 		data.searchIn !== 'bookmarks' &&
 		!plugins.hooks.hasListeners('filter:search.filterAndSort')) {
-		return pids;
+		// Apply synonym scoring even for basic relevance sorting
+		return await applySynonymScoring(pids, data);
 	}
 	let postsData = await getMatchedPosts(pids, data);
 	if (!postsData.length) {
@@ -238,6 +240,9 @@ async function filterAndSort(pids, data) {
 	postsData = filterByPostcount(postsData, data.replies, data.repliesFilter);
 	postsData = filterByTimerange(postsData, data.timeRange, data.timeFilter);
 	postsData = filterByTags(postsData, data.hasTags);
+
+	// Calculate synonym scores before sorting
+	postsData = await addSynonymScores(postsData, data);
 
 	sortPosts(postsData, data);
 
@@ -353,7 +358,21 @@ function filterByTags(posts, hasTags) {
 }
 
 function sortPosts(posts, data) {
-	if (!posts.length || data.sortBy === 'relevance') {
+	if (!posts.length) {
+		return;
+	}
+
+	// Sort by synonym score for relevance
+	if (data.sortBy === 'relevance') {
+		// Sort by synonym score (higher is better), then by original position
+		posts.sort((p1, p2) => {
+			const scoreDiff = (p2.synonymScore || 0) - (p1.synonymScore || 0);
+			if (scoreDiff !== 0) {
+				return scoreDiff;
+			}
+			// If same synonym score, maintain original order
+			return 0;
+		});
 		return;
 	}
 
@@ -421,6 +440,75 @@ async function getSearchUids(data) {
 		return [];
 	}
 	return await user.getUidsByUsernames(Array.isArray(data.postedBy) ? data.postedBy : [data.postedBy]);
+}
+
+/**
+ * Apply synonym scoring to posts for relevance ranking
+ * Used when no filtering is needed but synonym scoring should be applied
+ */
+async function applySynonymScoring(pids, data) {
+	if (!data.query || !pids.length) {
+		return pids;
+	}
+	
+	// Get post content and topic titles
+	const postsData = await posts.getPostsFields(pids, ['pid', 'tid', 'content']);
+	const tids = _.uniq(postsData.map(p => p.tid));
+	const topicsData = await topics.getTopicsFields(tids, ['tid', 'title']);
+	const tidToTitle = _.zipObject(topicsData.map(t => t.tid), topicsData.map(t => t.title));
+	
+	// Calculate synonym scores
+	const searchTerms = String(data.query).toLowerCase().split(/\s+/).filter(Boolean);
+	
+	const scoredPosts = postsData.map((post) => {
+		if (!post) return null;
+		
+		const title = tidToTitle[post.tid] || '';
+		const content = post.content || '';
+		const combinedText = `${title} ${content}`;
+		
+		// Calculate synonym score using the algorithm
+		const synonymScore = synonyms.calculateScore(searchTerms, combinedText);
+		
+		return {
+			pid: post.pid,
+			synonymScore: synonymScore,
+		};
+	}).filter(Boolean);
+	
+	// Sort by synonym score (highest first)
+	scoredPosts.sort((a, b) => (b.synonymScore || 0) - (a.synonymScore || 0));
+	
+	// Return pids in sorted order
+	return scoredPosts.map(p => p.pid);
+}
+
+/**
+ * Add synonym scores to post objects
+ */
+async function addSynonymScores(postsData, data) {
+	if (!data.query || !postsData.length) {
+		return postsData;
+	}
+	
+	const searchTerms = String(data.query).toLowerCase().split(/\s+/).filter(Boolean);
+	
+	// Add synonym score to each post
+	for (const post of postsData) {
+		if (!post || !post.topic) {
+			continue;
+		}
+		
+		// Get post content
+		const postContent = await posts.getPostField(post.pid, 'content');
+		const title = post.topic.title || '';
+		const combinedText = `${title} ${postContent || ''}`;
+		
+		// Calculate synonym score
+		post.synonymScore = synonyms.calculateScore(searchTerms, combinedText);
+	}
+	
+	return postsData;
 }
 
 require('./promisify')(search);

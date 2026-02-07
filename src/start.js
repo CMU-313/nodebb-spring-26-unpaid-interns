@@ -18,6 +18,11 @@ start.start = async function () {
 		const meta = require('./meta');
 		await meta.configs.init();
 
+		// Initialize synonym search system
+		const synonyms = require('./synonyms');
+		await synonyms.init();
+		winston.verbose('* synonym search system initialized');
+
 		if (nconf.get('runJobs')) {
 			await runUpgrades();
 		}
