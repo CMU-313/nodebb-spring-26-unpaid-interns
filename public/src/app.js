@@ -16,6 +16,7 @@ Benchpress.setGlobal('config', config);
 require('./sockets');
 require('./overrides');
 require('./ajaxify');
+require('modules/poll-creator').init();
 
 app = window.app || {};
 
