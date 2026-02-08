@@ -7,6 +7,80 @@ define('search', [
 		current: {},
 	};
 
+	// Save search term to history, keeping only the 8 most recent unique terms. 
+	// Terms must be at least 2 characters long.
+	Search.saveToHistory = function(term){
+		if(!term || term.length < 2) return;
+
+		let history = JSON.parse(storage.getItem('searchHistory') || '[]');
+		history = history.filter(item => item !== term);
+		history.unshift(term);
+		history = history.slice(0, 8);
+		storage.setItem('searchHistory', JSON.stringify(history));
+	};
+
+	//Get search history
+	Search.getHistory = function(){
+		try{
+			return JSON.parse(storage.getItem('searchHistory') || '[]');
+		} catch(err){
+			console.error('Error reading search history:',err);
+			return [];
+		}
+		
+	};
+
+	// Clear search history
+	Search.clearHistory = function(){
+		storage.removeItem('searchHistory');
+	};
+
+	//Display search history in a dropdown below the search input
+	Search.showHistoryDropdown = function(inputEl, dropdownEl){
+		const history = Search.getHistory();
+
+		if(!history || history.length === 0){
+			dropdownEl.addClass('hidden');
+			return;
+		}
+
+		let historyHTML = '<div class="search-history-container"><ul>';
+		historyHTML += '<div class="search-history-items">';
+
+		history.forEach(function(term){
+			historyHTML += '<div class="search-history-item" data-term=" ' + utils.escapeHTML(term) + '">';
+			historyHTML += '<svg class="search-history-icon" width ="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" stroke-width="2">';
+			historyHTML += '<circle cx="12" cy="12" r="10"></circle>';
+			historyHTML += '<polyline points="12 6 12 12 16 14"></polyline>';
+			historyHTML += '</svg>';
+			historyHTML += '<span class="search-history-text">' + utils.escapeHTML(term) + '</span>';
+			historyHTML += '</div>';
+		});
+
+		historyHTML += '</div>';
+		historyHTML += '<div class="search-history-clear"><button class="btn btn-link btn-sm">Clear History</button></div>';
+		historyHTML += '<button class="clear-history-btn">Clear search history</button>';
+		historyHTML += '</div>';
+		historyHTML += '</div>';
+
+		containerEl.removeClass('hidden').find('.quick-search-results-container').html(historyHTML);
+
+		containerEl.find('.search-history-item').on('click', function(){
+			const term = $(this).data('term');
+			inputEl.val(term);
+			inputEl.closest('form').trigger('submit');
+			
+		});
+
+		containerEl.find('.clear-history-btn').on('click', function(e){
+			e.preventDefault();
+			e.stopPropagation();
+			Search.clearHistory();
+			containerEl.addClass('hidden');
+			inputEl.trigger('focus');
+		});
+	};
+
 	Search.init = function (searchOptions) {
 		if (!config.searchEnabled) {
 			return;
@@ -71,6 +145,10 @@ define('search', [
 			const data = Search.getSearchPreferences();
 			data.term = input.val();
 			data.in = searchOptions.in;
+
+			Search.saveToHistory(data.term);
+
+
 
 			// Override search target if webfinger handle entered
 			if (webfingerRegex.test(data.term)) {
@@ -235,6 +313,12 @@ define('search', [
 		inputEl.on('focus', function () {
 			const query = inputEl.val();
 			oldValue = query;
+
+			if (!query || query.length === 0){
+				Search.showHistoryDropdown(quickSearchResults, inputEl, searchOptions);
+				return;
+			}
+
 			if (query && quickSearchResults.find('#quick-search-results').children().length) {
 				updateCategoryFilterName();
 				if (ajaxified) {
