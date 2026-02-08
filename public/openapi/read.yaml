@@ -272,6 +272,10 @@ paths:
     $ref: 'read/tags.yaml'
   "/api/tags/{tag}":
     $ref: 'read/tags/tag.yaml'
+  /api/polls:
+    $ref: 'read/polls.yaml'
+  "/api/polls/{pollId}":
+    $ref: 'read/polls/pollId.yaml'
   /api/popular:
     $ref: 'read/popular.yaml'
   /api/top:
