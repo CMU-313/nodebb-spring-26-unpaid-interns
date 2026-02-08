@@ -1,0 +1,27 @@
+get:
+  tags:
+    - polls
+  summary: Get all polls
+  description: Returns a list of all polls.
+  responses:
+    "200":
+      description: An array of poll objects.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                title:
+                  type: string
+                question:
+                  type: string
+                options:
+                  type: array
+                  items:
+                    type: string
+                creatorUid:
+                  type: number

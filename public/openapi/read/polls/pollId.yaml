@@ -1,0 +1,15 @@
+get:
+  tags:
+    - polls
+  summary: Get a poll by ID
+  description: Returns a single poll by its ID.
+  parameters:
+    - name: pollId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: 1
+  responses:
+    "500":
+      description: "Poll not found"
