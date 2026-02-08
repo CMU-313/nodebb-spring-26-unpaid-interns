@@ -9,7 +9,8 @@ Polls.create = async function (pollData) {
 	const { title, question, options, creatorUid } = pollData;
 
 	//check if input is valid
-	if (!title || !question || !options || !Array.isArray(options) || options.length < 2) {throw new Error('Poll data not valid, need title, question, and at least 2 options');
+	if (!title || !question || !options || !Array.isArray(options) || options.length < 2) {
+		throw new Error('Poll data not valid, need title, question, and at least 2 options');
 	}
 	
 	const timestamp = Date.now();
@@ -20,11 +21,11 @@ Polls.create = async function (pollData) {
 		pollId: pollId,
 		title: title,
 		question: question,
-		options: options.map((option, index) => ({
+		options: JSON.stringify(options.map((option, index) => ({
 			optionId: index,
 			text: option,
 			votes: 0,
-		})),
+		}))),
 		creatorUid: creatorUid,
 		timestamp: timestamp,
 		totalVotes: 0,
@@ -33,6 +34,8 @@ Polls.create = async function (pollData) {
 	await db.setObject(pollId, poll);
 	await db.sortedSetAdd('polls:created', timestamp, pollId);
 	
+	// Parse options back for the return value
+	poll.options = JSON.parse(poll.options);
 	return poll;
 };
 
@@ -41,6 +44,9 @@ Polls.get = async function (pollId) {
 	const poll = await db.getObject(pollId);
 	if (!poll) {
 		throw new Error('Poll not found');
+	}
+	if (poll.options) {
+		poll.options = JSON.parse(poll.options);
 	}
 	return poll;
 };
@@ -56,7 +62,13 @@ Polls.getMultiple = async function (pollIds) {
 	if (!pollIds || !pollIds.length) {
 		return [];
 	}
-	return await db.getObjects(pollIds);
+	const polls = await db.getObjects(pollIds);
+	return polls.map((poll) => {
+		if (poll && poll.options) {
+			poll.options = JSON.parse(poll.options);
+		}
+		return poll;
+	});
 };
 
 //delete a poll
