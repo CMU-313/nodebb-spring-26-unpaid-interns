@@ -36,7 +36,7 @@ define('search', [
 	};
 
 	//Display search history in a dropdown below the search input
-	Search.showHistoryDropdown = function(inputEl, dropdownEl){
+	Search.displayHistory = function(containerEl, inputEl, searchOptions){
 		const history = Search.getHistory();
 
 		if(!history || history.length === 0){
@@ -48,8 +48,8 @@ define('search', [
 		historyHTML += '<div class="search-history-items">';
 
 		history.forEach(function(term){
-			historyHTML += '<div class="search-history-item" data-term=" ' + utils.escapeHTML(term) + '">';
-			historyHTML += '<svg class="search-history-icon" width ="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" stroke-width="2">';
+			historyHTML += '<div class="search-history-item" data-term="' + utils.escapeHTML(term) + '">';
+			historyHTML += '<svg class="search-history-icon" width ="16" height="16" viewBox="0 0 24 24" fill="none" stroke = "currentColor" stroke-width="2">';
 			historyHTML += '<circle cx="12" cy="12" r="10"></circle>';
 			historyHTML += '<polyline points="12 6 12 12 16 14"></polyline>';
 			historyHTML += '</svg>';
@@ -63,7 +63,7 @@ define('search', [
 		historyHTML += '</div>';
 		historyHTML += '</div>';
 
-		containerEl.removeClass('hidden').find('.quick-search-results-container').html(historyHTML);
+		dropdownEl.removeClass('hidden').find('.quick-search-results-container').html(historyHTML);
 
 		containerEl.find('.search-history-item').on('click', function(){
 			const term = $(this).data('term');
