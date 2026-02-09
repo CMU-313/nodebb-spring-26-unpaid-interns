@@ -1,15 +1,32 @@
 'use strict';
 
-define('modules/poll-creator', ['components', 'translator', 'benchpress', 'api', 'bootbox'], function (components, translator, Benchpress, api, bootbox) {
+define('modules/poll-creator', ['components', 'translator', 'benchpress', 'api', 'bootbox', 'alerts'], function (components, translator, Benchpress, api, bootbox, alerts) {
     const PollCreator = {};
 
     PollCreator.init = function () {
-        $(window).on('action:composer.enhanced', addPollButton);
+        console.log('[PollCreator] Init called');
+        $(window).on('action:composer.loaded', addPollButton);
     };
 
     function addPollButton(ev, data) {
-        const formattingBar = data.formatting;
+        console.log('[PollCreator] action:composer.loaded fired', data);
+
+        if (!data) {
+            console.error('[PollCreator] data object is undefined');
+            return;
+        }
+
+        const postContainer = data.postContainer;
+        if (!postContainer) {
+            console.error('[PollCreator] postContainer is undefined');
+            return;
+        }
+
+        const formattingBar = postContainer.find('.formatting-bar');
+        console.log('[PollCreator] formattingBar found:', formattingBar.length);
+
         if (formattingBar.find('[data-format="poll"]').length) {
+            console.log('[PollCreator] Poll button already exists');
             return;
         }
 
@@ -18,14 +35,19 @@ define('modules/poll-creator', ['components', 'translator', 'benchpress', 'api',
         // Insert before the upload button if possible, otherwise append
         const uploadBtn = formattingBar.find('[data-format="upload"]').closest('li');
         if (uploadBtn.length) {
+            console.log('[PollCreator] Inserting before upload button');
             uploadBtn.before(pollBtn);
         } else {
+            console.log('[PollCreator] Appending to formatting bar list');
             formattingBar.find('ul').append(pollBtn);
         }
 
         pollBtn.on('click', function (e) {
             e.preventDefault();
-            launchPollCreator(data.post_uuid);
+            // action:composer.loaded data has post_uuid directly, or fallback to attr
+            const post_uuid = data.post_uuid || postContainer.attr('data-uuid');
+            console.log('[PollCreator] Launching poll creator for post:', post_uuid);
+            launchPollCreator(post_uuid);
         });
     }
 
@@ -61,16 +83,11 @@ define('modules/poll-creator', ['components', 'translator', 'benchpress', 'api',
                         const options = optionsText.split('\n').filter(o => o.trim().length > 0);
 
                         if (!title || !question || options.length < 2) {
-                            app.alert({
-                                type: 'danger',
-                                alert_id: 'poll-creation-error',
-                                title: 'Invalid Poll',
-                                message: 'Please provide a title, question, and at least two options.',
-                            });
+                            alerts.error('Please provide a title, question, and at least two options.');
                             return false;
                         }
 
-                        api.post('/polls', {
+                        api.post('/api/polls', {
                             title: title,
                             question: question,
                             options: options,
@@ -81,19 +98,9 @@ define('modules/poll-creator', ['components', 'translator', 'benchpress', 'api',
                             composerArea.val(currentContent + (currentContent.length ? '\n' : '') + pollTag);
                             composerArea.trigger('input'); // Trigger preview update
 
-                            app.alert({
-                                type: 'success',
-                                alert_id: 'poll-created',
-                                title: 'Poll Created',
-                                message: 'Poll has been successfully created and added to the post.',
-                            });
+                            alerts.success('Poll has been successfully created and added to the post.');
                         }).catch((err) => {
-                            app.alert({
-                                type: 'danger',
-                                alert_id: 'poll-creation-failed',
-                                title: 'Error',
-                                message: err.message || 'Failed to create poll.',
-                            });
+                            alerts.error(err.message || 'Failed to create poll.');
                         });
                     }
                 }
