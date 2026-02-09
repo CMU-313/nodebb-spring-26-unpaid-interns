@@ -60,29 +60,29 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
             if (!container.length) return;
 
             let html = `
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <i class="fa fa-bar-chart"></i> ${poll.title}
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">${poll.question}</h5>
-                        <ul class="list-group list-group-flush">
-            `;
+				<div class="card mb-3">
+					<div class="card-header">
+						<i class="fa fa-bar-chart"></i> ${poll.title}
+					</div>
+					<div class="card-body">
+						<h5 class="card-title">${poll.question}</h5>
+						<ul class="list-group list-group-flush">
+			`;
 
             poll.options.forEach(option => {
                 html += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        ${option.text}
-                        <span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
-                    </li>
-                `;
+					<li class="list-group-item d-flex justify-content-between align-items-center">
+						${option.text}
+						<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
+					</li>
+				`;
             });
 
             html += `
-                        </ul>
-                    </div>
-                </div>
-            `;
+						</ul>
+					</div>
+				</div>
+			`;
 
             container.html(html);
         }).catch((err) => {
