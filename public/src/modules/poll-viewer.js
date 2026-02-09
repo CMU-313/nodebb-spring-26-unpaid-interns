@@ -1,6 +1,6 @@
 'use strict';
 
-define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 'alerts'], function (components, translator, Benchpress, api, alerts) {
+define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'], function (components, translator, Benchpress, api) {
     const PollViewer = {};
 
     PollViewer.init = function () {
@@ -35,7 +35,7 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 
         const content = postContentEl.html();
         const pollRegex = /\[poll:(.*?)\]/g;
-        let match = pollRegex.exec(content);
+        const match = pollRegex.exec(content);
 
         if (match) {
             const pollId = match[1];
