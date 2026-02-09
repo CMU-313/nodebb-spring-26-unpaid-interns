@@ -1,0 +1,1 @@
+module.exports = require('../../../../../node_modules/nodebb-plugin-dbsearch/public/admin.js');
