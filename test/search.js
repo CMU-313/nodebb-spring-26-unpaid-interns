@@ -9,6 +9,7 @@ const topics = require('../src/topics');
 const categories = require('../src/categories');
 const user = require('../src/user');
 const search = require('../src/search');
+const searchApi = require('../src/api/search');
 const privileges = require('../src/privileges');
 const request = require('../src/request');
 
@@ -223,5 +224,46 @@ describe('Search', () => {
 		assert(body);
 		assert.strictEqual(response.statusCode, 200);
 		await privileges.global.rescind(['groups:search:content'], 'guests');
+	});
+
+	it('should save, load, and clear user search history by recency', async () => {
+		const caller = { uid: phoebeUid };
+		const originalNow = Date.now;
+		let ts = 1700000000000;
+
+		Date.now = () => {
+			ts += 1;
+			return ts;
+		};
+
+		try {
+			await searchApi.clearHistory(caller);
+
+			await searchApi.saveHistory(caller, { query: 'A', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'B', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'C', searchIn: 'titlesposts' });
+
+			let history = await searchApi.getHistory(caller, { limit: 10 });
+			assert.deepStrictEqual(history.searches.map(item => item.query), ['C', 'B', 'A']);
+
+			await searchApi.saveHistory(caller, { query: 'B', searchIn: 'titlesposts' });
+			history = await searchApi.getHistory(caller, { limit: 10 });
+			assert.deepStrictEqual(history.searches.map(item => item.query), ['B', 'C', 'A']);
+
+			await Promise.all(Array.from({ length: 12 }, (_, i) => (
+				searchApi.saveHistory(caller, { query: `query-${i}`, searchIn: 'titlesposts' })
+			)));
+
+			history = await searchApi.getHistory(caller, { limit: 20 });
+			assert.strictEqual(history.searches.length, 10);
+			assert.strictEqual(history.searches[0].query, 'query-11');
+			assert.strictEqual(history.searches[9].query, 'query-2');
+
+			await searchApi.clearHistory(caller);
+			history = await searchApi.getHistory(caller, { limit: 10 });
+			assert.deepStrictEqual(history.searches, []);
+		} finally {
+			Date.now = originalNow;
+		}
 	});
 });
