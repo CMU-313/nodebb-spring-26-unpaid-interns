@@ -106,8 +106,5 @@
 	"show-results-as-topics": "Show results as topics",
 	"show-results-as-posts": "Show results as posts",
 	"see-more-results": "See more results (%1)",
-	"search-in-category": "Search in \"%1\"",
-	"recent-searches": "Recent searches",
-	"clear-history": "Clear History",
-	"no-search-history": "No recent searches"
+	"search-in-category": "Search in \"%1\""
 }

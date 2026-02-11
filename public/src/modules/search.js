@@ -1,12 +1,11 @@
 'use strict';
 
 define('search', [
-	'translator', 'storage', 'hooks', 'alerts', 'bootstrap', 'api',
-], function (translator, storage, hooks, alerts, bootstrap, api) {
+	'translator', 'storage', 'hooks', 'alerts', 'bootstrap',
+], function (translator, storage, hooks, alerts, bootstrap) {
 	const Search = {
 		current: {},
 	};
-	const SEARCH_HISTORY_LIMIT = 10;
 
 	Search.init = function (searchOptions) {
 		if (!config.searchEnabled) {
@@ -78,13 +77,6 @@ define('search', [
 				data.in = 'users';
 			}
 
-			if (config.loggedIn && data.term && data.term.trim().length) {
-				api.post('/search/history', {
-					query: data.term,
-					searchIn: data.in,
-				}).catch(() => {});
-			}
-
 			hooks.fire('action:search.submit', {
 				searchOptions: data,
 				searchElements: searchElements,
@@ -109,31 +101,6 @@ define('search', [
 		let oldValue = inputEl.val();
 		const filterCategoryEl = quickSearchResults.find('.filter-category');
 
-		async function showSearchHistory() {
-			if (!config.loggedIn || !inputEl.is(':focus') || inputEl.val().trim().length) {
-				return;
-			}
-
-			quickSearchResults.removeClass('hidden');
-			quickSearchResults.find('.loading-indicator').addClass('hidden');
-			filterCategoryEl.addClass('hidden');
-
-			try {
-				const data = await api.get('/search/history', { limit: SEARCH_HISTORY_LIMIT });
-				data.dropdown = { maxWidth: '400px', maxHeight: '500px', ...options.dropdown };
-				app.parseAndTranslate('partials/quick-search-history', data, function (html) {
-					if (!inputEl.is(':focus') || inputEl.val().trim().length) {
-						return;
-					}
-					quickSearchResults.removeClass('hidden')
-						.find('.quick-search-results-container')
-						.html(html);
-				});
-			} catch (err) {
-				quickSearchResults.addClass('hidden');
-			}
-		}
-
 		function updateCategoryFilterName() {
 			if (ajaxify.data.template.category && ajaxify.data.cid) {
 				translator.translate('[[search:search-in-category, ' + ajaxify.data.name + ']]', function (translated) {
@@ -147,7 +114,6 @@ define('search', [
 		function doSearch() {
 			options.searchOptions = Object.assign({}, searchOptions);
 			options.searchOptions.term = inputEl.val();
-			quickSearchResults.find('[component="search/history/clear"]').off('click');
 			updateCategoryFilterName();
 
 			if (ajaxify.data.template.category && ajaxify.data.cid) {
@@ -226,12 +192,8 @@ define('search', [
 
 		inputEl.off('keyup').on('keyup', utils.debounce(function () {
 			if (inputEl.val().length < 3) {
+				quickSearchResults.addClass('hidden');
 				oldValue = inputEl.val();
-				if (!inputEl.val().length) {
-					showSearchHistory();
-				} else {
-					quickSearchResults.addClass('hidden');
-				}
 				return;
 			}
 			if (inputEl.val() === oldValue) {
@@ -273,10 +235,6 @@ define('search', [
 		inputEl.on('focus', function () {
 			const query = inputEl.val();
 			oldValue = query;
-			if (!query.length) {
-				showSearchHistory();
-				return;
-			}
 			if (query && quickSearchResults.find('#quick-search-results').children().length) {
 				updateCategoryFilterName();
 				if (ajaxified) {
@@ -293,37 +251,7 @@ define('search', [
 		});
 
 		inputEl.off('refresh').on('refresh', function () {
-			if (!inputEl.val().trim().length) {
-				showSearchHistory();
-			} else {
-				doSearch();
-			}
-		});
-
-		quickSearchResults.on('click', '[component="search/history/item"]', function (e) {
-			e.preventDefault();
-			const query = $(this).attr('data-query');
-			if (!query) {
-				return;
-			}
-			inputEl.val(query);
-			const data = Search.getSearchPreferences();
-			data.term = query;
-			data.in = searchOptions.in;
-			hooks.fire('action:search.submit', {
-				searchOptions: data,
-				searchElements: options.searchElements,
-			});
-			Search.query(data, function () {
-				inputEl.val('');
-				inputEl.trigger('blur');
-			});
-		});
-
-		quickSearchResults.on('click', '[component="search/history/clear"]', async function (e) {
-			e.preventDefault();
-			await api.del('/search/history').catch(() => {});
-			showSearchHistory();
+			doSearch();
 		});
 	};
 

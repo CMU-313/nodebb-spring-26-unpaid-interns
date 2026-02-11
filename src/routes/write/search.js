@@ -14,9 +14,6 @@ module.exports = function () {
 	// setupApiRoute(router, 'post', '/', [...middlewares], controllers.write.search.TBD);
 
 	setupApiRoute(router, 'get', '/categories', [], controllers.write.search.categories);
-	setupApiRoute(router, 'get', '/history', [...middlewares], controllers.write.search.history);
-	setupApiRoute(router, 'post', '/history', [...middlewares], controllers.write.search.saveHistory);
-	setupApiRoute(router, 'delete', '/history', [...middlewares], controllers.write.search.clearHistory);
 
 	setupApiRoute(router, 'get', '/chats/:roomId/users', [...middlewares, middleware.checkRequired.bind(null, ['query']), middleware.canChat, middleware.assert.room], controllers.write.search.roomUsers);
 	setupApiRoute(router, 'get', '/chats/:roomId/messages', [...middlewares, middleware.checkRequired.bind(null, ['query']), middleware.canChat, middleware.assert.room], controllers.write.search.roomMessages);
