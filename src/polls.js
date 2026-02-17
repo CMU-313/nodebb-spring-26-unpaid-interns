@@ -76,3 +76,38 @@ Polls.delete = async function (pollId) {
 	await db.delete(pollId);
 	await db.sortedSetRemove('polls:created', pollId);
 };
+
+//vote on a poll
+Polls.vote = async function (pollId, optionId, uid) {
+	//check if user has already voted
+	const hasVoted = await db.isSetMember(`${pollId}:voters`, uid);
+	if (hasVoted) {
+		throw new Error('User has already voted on this poll');
+	}
+
+	//get the poll
+	const poll = await Polls.get(pollId);
+
+	//find the option and increment votes
+	const optionIndex = poll.options.findIndex(opt => opt.optionId === parseInt(optionId, 10));
+	if (optionIndex === -1) {
+		throw new Error('Option not found');
+	}
+
+	poll.options[optionIndex].votes += 1;
+	poll.totalVotes = (parseInt(poll.totalVotes, 10) || 0) + 1;
+
+	//update the poll in the database
+	const pollToSave = {
+		...poll,
+		options: JSON.stringify(poll.options),
+	};
+
+	await db.setObject(pollId, pollToSave);
+
+	//record that the user has voted and store response
+	await db.setAdd(`${pollId}:voters`, uid);
+	await db.setObjectField(`${pollId}:responses`, uid, optionId);
+
+	return poll;
+};
