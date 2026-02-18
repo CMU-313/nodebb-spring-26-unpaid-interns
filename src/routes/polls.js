@@ -15,4 +15,5 @@ module.exports = function (app, middleware, controllers) {
 	apiRouter.get('/polls', [...middlewares], helpers.tryRoute(controllers.polls.getAll));
 	apiRouter.get('/polls/:pollId', [...middlewares], helpers.tryRoute(controllers.polls.get));
 	apiRouter.delete('/polls/:pollId', [...middlewares], helpers.tryRoute(controllers.polls.delete));
+	apiRouter.post('/polls/:pollId/vote', [...middlewares], helpers.tryRoute(controllers.polls.vote));
 };

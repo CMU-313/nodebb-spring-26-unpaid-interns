@@ -24,7 +24,7 @@ pollsController.create = async function (req, res, next) {
 
 pollsController.get = async function (req, res, next) {
 	try {
-		const poll = await Polls.get(req.params.pollId);
+		const poll = await Polls.get(req.params.pollId, req.uid);
 		res.json(poll);
 	} catch (err) {
 		next(err);
@@ -33,7 +33,7 @@ pollsController.get = async function (req, res, next) {
 
 pollsController.getAll = async function (req, res, next) {
 	try {
-		const polls = await Polls.getAll();
+		const polls = await Polls.getAll(req.uid);
 		res.json(polls);
 	} catch (err) {
 		next(err);
@@ -44,6 +44,20 @@ pollsController.delete = async function (req, res, next) {
 	try {
 		await Polls.delete(req.params.pollId);
 		res.json({ message: 'Poll deleted successfully' });
+	} catch (err) {
+		next(err);
+	}
+};
+
+pollsController.vote = async function (req, res, next) {
+	try {
+		const { optionId } = req.body;
+		if (optionId === undefined || optionId === null) {
+			throw new Error('Option ID is required');
+		}
+
+		const poll = await Polls.vote(req.params.pollId, optionId, req.uid);
+		res.json(poll);
 	} catch (err) {
 		next(err);
 	}
