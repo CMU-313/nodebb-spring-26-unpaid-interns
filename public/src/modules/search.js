@@ -108,9 +108,10 @@ define('search', [
 		const inputEl = options.searchElements.inputEl;
 		let oldValue = inputEl.val();
 		const filterCategoryEl = quickSearchResults.find('.filter-category');
+		let allSearchHistory = []; // Store all search history for filtering
 
-		async function showSearchHistory() {
-			if (!config.loggedIn || !inputEl.is(':focus') || inputEl.val().trim().length) {
+		async function showSearchHistory(filterTerm = '') {
+			if (!config.loggedIn || !inputEl.is(':focus')) {
 				return;
 			}
 
@@ -119,10 +120,27 @@ define('search', [
 			filterCategoryEl.addClass('hidden');
 
 			try {
-				const data = await api.get('/search/history', { limit: SEARCH_HISTORY_LIMIT });
-				data.dropdown = { maxWidth: '400px', maxHeight: '500px', ...options.dropdown };
+				// Fetch search history if not already loaded or if no filter term
+				if (!filterTerm || allSearchHistory.length === 0) {
+					const data = await api.get('/search/history', { limit: SEARCH_HISTORY_LIMIT });
+					allSearchHistory = data.searches || [];
+				}
+
+				// Filter search history based on input
+				let filteredSearches = allSearchHistory;
+				if (filterTerm) {
+					filteredSearches = allSearchHistory.filter(search =>
+						search.query.toLowerCase().startsWith(filterTerm.toLowerCase())
+					);
+				}
+
+				const data = {
+					searches: filteredSearches,
+					dropdown: { maxWidth: '400px', maxHeight: '500px', ...options.dropdown },
+				};
+
 				app.parseAndTranslate('partials/quick-search-history', data, function (html) {
-					if (!inputEl.is(':focus') || inputEl.val().trim().length) {
+					if (!inputEl.is(':focus')) {
 						return;
 					}
 					quickSearchResults.removeClass('hidden')
@@ -225,24 +243,32 @@ define('search', [
 		});
 
 		inputEl.off('keyup').on('keyup', utils.debounce(function () {
-			if (inputEl.val().length < 3) {
-				oldValue = inputEl.val();
-				if (!inputEl.val().length) {
-					showSearchHistory();
-				} else {
-					quickSearchResults.addClass('hidden');
-				}
+			const currentValue = inputEl.val();
+			
+			// Show filtered autocomplete suggestions for 1-2 characters
+			if (currentValue.length > 0 && currentValue.length < 3) {
+				oldValue = currentValue;
+				showSearchHistory(currentValue);
 				return;
 			}
-			if (inputEl.val() === oldValue) {
+			
+			// Show all history when empty
+			if (!currentValue.length) {
+				oldValue = currentValue;
+				showSearchHistory();
 				return;
 			}
-			oldValue = inputEl.val();
+			
+			// Perform full search for 3+ characters
+			if (currentValue === oldValue) {
+				return;
+			}
+			oldValue = currentValue;
 			if (!inputEl.is(':focus')) {
 				return quickSearchResults.addClass('hidden');
 			}
 			doSearch();
-		}, 500));
+		}, 300));
 
 		quickSearchResults.on('mousedown', '.quick-search-results > *', function () {
 			$(window).one('mouseup', function () {
@@ -277,6 +303,11 @@ define('search', [
 				showSearchHistory();
 				return;
 			}
+			// Show autocomplete for short queries (1-2 chars)
+			if (query.length < 3) {
+				showSearchHistory(query);
+				return;
+			}
 			if (query && quickSearchResults.find('#quick-search-results').children().length) {
 				updateCategoryFilterName();
 				if (ajaxified) {
@@ -293,8 +324,11 @@ define('search', [
 		});
 
 		inputEl.off('refresh').on('refresh', function () {
-			if (!inputEl.val().trim().length) {
+			const query = inputEl.val().trim();
+			if (!query.length) {
 				showSearchHistory();
+			} else if (query.length < 3) {
+				showSearchHistory(query);
 			} else {
 				doSearch();
 			}
@@ -306,6 +340,7 @@ define('search', [
 			if (!query) {
 				return;
 			}
+			// Populate search bar and submit search
 			inputEl.val(query);
 			const data = Search.getSearchPreferences();
 			data.term = query;
@@ -323,6 +358,7 @@ define('search', [
 		quickSearchResults.on('click', '[component="search/history/clear"]', async function (e) {
 			e.preventDefault();
 			await api.del('/search/history').catch(() => {});
+			allSearchHistory = []; // Clear cached history
 			showSearchHistory();
 		});
 	};
