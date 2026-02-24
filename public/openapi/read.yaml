@@ -248,6 +248,8 @@ paths:
     $ref: 'read/tos.yaml'
   /api/search:
     $ref: 'read/search.yaml'
+  /api/search/autocomplete:
+    $ref: 'read/search/autocomplete.yaml'
   "/api/reset":
     $ref: 'read/reset.yaml'
   "/api/reset/{code}":
