@@ -126,7 +126,7 @@ define('search', [
 		const debouncedInlineSearch = utils.debounce(async function () {
 			const query = inputEl.val();
 			
-			if (query.length === 0 || query.length >= 3) {
+			if (query.length === 0) {
 				if (ghostTextEl) {
 					ghostTextEl.text('');
 				}
