@@ -1,0 +1,82 @@
+get:
+  tags:
+    - search
+  summary: get recent search history
+  description: Returns a recency-ordered list of the current user's recent searches.
+  parameters:
+    - in: query
+      name: limit
+      schema:
+        type: number
+      required: false
+      description: Maximum number of history items to return.
+      example: 10
+  responses:
+    '200':
+      description: search history retrieved
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../../components/schemas/Status.yaml#/Status
+              response:
+                type: object
+                properties:
+                  searches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        query:
+                          type: string
+                        timestamp:
+                          type: number
+
+post:
+  tags:
+    - search
+  summary: save a search history item
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            query:
+              type: string
+              example: nodebb intern project
+            searchIn:
+              type: string
+              example: titlesposts
+  responses:
+    '200':
+      description: search history item saved
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../../components/schemas/Status.yaml#/Status
+              response:
+                type: object
+
+delete:
+  tags:
+    - search
+  summary: clear search history
+  responses:
+    '200':
+      description: search history cleared
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../../components/schemas/Status.yaml#/Status
+              response:
+                type: object
