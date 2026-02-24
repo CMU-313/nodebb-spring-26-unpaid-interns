@@ -1,0 +1,30 @@
+// Search autocomplete hover styles
+.search-history-link {
+	transition: background-color 0.2s ease;
+	
+	&:hover {
+		background-color: rgba(0, 0, 0, 0.05) !important;
+	}
+}
+
+// Dark mode support
+[data-bs-theme="dark"] {
+	.search-history-link {
+		&:hover {
+			background-color: rgba(255, 255, 255, 0.1) !important;
+		}
+	}
+}
+
+// Focus state for keyboard navigation
+.search-history-link:focus {
+	background-color: rgba(0, 0, 0, 0.08) !important;
+	outline: 2px solid var(--bs-primary);
+	outline-offset: -2px;
+}
+
+[data-bs-theme="dark"] {
+	.search-history-link:focus {
+		background-color: rgba(255, 255, 255, 0.15) !important;
+	}
+}
