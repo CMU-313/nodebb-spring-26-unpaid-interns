@@ -1,0 +1,42 @@
+get:
+  tags:
+    - search
+  summary: Get search autocomplete suggestions
+  description: Returns autocomplete suggestions based on user's search history
+  parameters:
+    - in: query
+      name: query
+      schema:
+        type: string
+      required: true
+      description: The search query prefix to match against
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        default: 10
+      required: false
+      description: Maximum number of suggestions to return
+  responses:
+    "200":
+      description: Autocomplete suggestions from user's search history
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              suggestions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    query:
+                      type: string
+                      description: The search query from history
+                      example: "nodejs tutorial"
+                    timestamp:
+                      type: number
+                      description: Unix timestamp when the search was performed
+                      example: 1708794000000
+            required:
+              - suggestions
