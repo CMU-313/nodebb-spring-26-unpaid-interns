@@ -36,6 +36,30 @@ searchApi.getHistory = async (caller, data = {}) => {
 	};
 };
 
+searchApi.autocomplete = async (caller, data = {}) => {
+	if (!(caller.uid > 0)) {
+		throw new Error('[[error:no-privileges]]');
+	}
+
+	const query = String(data.query || '').trim().toLowerCase();
+	if (!query.length) {
+		return { suggestions: [] };
+	}
+
+	const limit = Math.max(1, Math.min(50, parseInt(data.limit, 10) || SEARCH_HISTORY_LIMIT));
+	const searches = await db.getSortedSetRevRangeWithScores(getSearchHistoryKey(caller.uid), 0, limit - 1);
+
+	// Filter for prefix matches
+	const suggestions = searches
+		.filter(item => String(item.value).toLowerCase().startsWith(query))
+		.map(item => ({
+			query: String(item.value),
+			timestamp: item.score,
+		}));
+
+	return { suggestions };
+};
+
 searchApi.clearHistory = async (caller) => {
 	if (!(caller.uid > 0)) {
 		throw new Error('[[error:no-privileges]]');

@@ -20,6 +20,151 @@ define('search', [
 		});
 	};
 
+	function setupInlineAutocomplete(inputEl) {
+		let ghostTextEl = null;
+		let currentHistorySuggestion = null;
+
+		// Create ghost text element
+		function createGhostText() {
+			if (ghostTextEl) {
+				return;
+			}
+			const inputParent = inputEl.parent();
+			inputParent.css('position', 'relative');
+			
+			ghostTextEl = $('<span class="search-ghost-text"></span>');
+			
+			// Get computed styles from input
+			const inputStyles = window.getComputedStyle(inputEl[0]);
+			
+			const leftPos = inputEl.position().left + parseInt(inputStyles.paddingLeft, 10) +
+				parseInt(inputStyles.borderLeftWidth, 10);
+			const topPos = inputEl.position().top + parseInt(inputStyles.paddingTop, 10) +
+				parseInt(inputStyles.borderTopWidth, 10);
+			
+			ghostTextEl.css({
+				position: 'absolute',
+				left: leftPos,
+				top: topPos,
+				color: '#999',
+				pointerEvents: 'none',
+				fontFamily: inputStyles.fontFamily,
+				fontSize: inputStyles.fontSize,
+				fontWeight: inputStyles.fontWeight,
+				lineHeight: inputStyles.lineHeight,
+				letterSpacing: inputStyles.letterSpacing,
+				whiteSpace: 'nowrap',
+				overflow: 'hidden',
+				zIndex: '1',
+				margin: '0',
+				padding: '0',
+			});
+			inputParent.append(ghostTextEl);
+		}
+
+		// Fetch search history suggestions
+		async function fetchHistorySuggestions(query) {
+			if (!config.loggedIn || query.length === 0) {
+				return [];
+			}
+			try {
+				const data = await api.get('/search/autocomplete', { query: query, limit: SEARCH_HISTORY_LIMIT });
+				return data.suggestions || [];
+			} catch (err) {
+				return [];
+			}
+		}
+
+		// Update ghost text with inline suggestion
+		function updateGhostText(query, suggestion) {
+			if (!ghostTextEl || !suggestion) {
+				if (ghostTextEl) {
+					ghostTextEl.text('');
+				}
+				currentHistorySuggestion = null;
+				return;
+			}
+			const lowerQuery = query.toLowerCase();
+			const lowerSuggestion = suggestion.toLowerCase();
+			if (lowerSuggestion.startsWith(lowerQuery)) {
+				// Create invisible prefix + visible suffix
+				const remaining = suggestion.substring(query.length);
+				
+				// Use a hidden span for the typed part to maintain spacing
+				const hiddenPrefix = $('<span></span>').text(query).css({
+					visibility: 'hidden',
+					display: 'inline',
+				});
+				
+				ghostTextEl.empty().append(hiddenPrefix).append(remaining);
+				currentHistorySuggestion = suggestion;
+			} else {
+				ghostTextEl.text('');
+				currentHistorySuggestion = null;
+			}
+		}
+
+		// Handle keyboard navigation for inline autocomplete
+		function handleKeyDown(e) {
+			// Right Arrow to accept inline suggestion
+			if (e.key === 'ArrowRight' && ghostTextEl && ghostTextEl.text() && currentHistorySuggestion) {
+				// Only accept if cursor is at the end of the input
+				const cursorPos = inputEl[0].selectionStart;
+				const inputLength = inputEl.val().length;
+				if (cursorPos === inputLength) {
+					e.preventDefault();
+					inputEl.val(currentHistorySuggestion);
+					ghostTextEl.text('');
+					currentHistorySuggestion = null;
+					// Trigger input event to update the dropdown
+					inputEl.trigger('input');
+				}
+			}
+		}
+
+		// Debounced search for inline autocomplete
+		const debouncedInlineSearch = utils.debounce(async function () {
+			const query = inputEl.val();
+			
+			if (query.length === 0 || query.length >= 3) {
+				if (ghostTextEl) {
+					ghostTextEl.text('');
+				}
+				currentHistorySuggestion = null;
+				return;
+			}
+
+			const suggestions = await fetchHistorySuggestions(query);
+			if (suggestions.length > 0) {
+				updateGhostText(query, suggestions[0].query);
+			} else {
+				if (ghostTextEl) {
+					ghostTextEl.text('');
+				}
+				currentHistorySuggestion = null;
+			}
+		}, 150);
+
+		// Initialize
+		createGhostText();
+		
+		// Event listeners
+		inputEl.on('input', function () {
+			debouncedInlineSearch();
+		});
+
+		inputEl.on('keydown', handleKeyDown);
+
+		inputEl.on('blur', function () {
+			setTimeout(function () {
+				if (ghostTextEl) {
+					ghostTextEl.text('');
+				}
+				currentHistorySuggestion = null;
+			}, 200);
+		});
+	}
+
 	function init(searchForm, searchOptions) {
 		const searchButton = searchForm.find('[component="search/button"]');
 		const searchFields = searchForm.find('[component="search/fields"]');
@@ -28,6 +173,9 @@ define('search', [
 		const quickSearchContainer = searchFields.find('#quick-search-container');
 		const toggleVisibility = searchFields.hasClass('hidden');
 		const webfingerRegex = /^(@|acct:)?[\w-]+@.+$/; // should match src/activitypub/helpers.js
+
+		// Setup inline autocomplete
+		setupInlineAutocomplete(searchInput);
 
 		if (toggleVisibility) {
 			searchFields.off('focusout').on('focusout', function dismissSearch() {
@@ -108,7 +256,6 @@ define('search', [
 		const inputEl = options.searchElements.inputEl;
 		let oldValue = inputEl.val();
 		const filterCategoryEl = quickSearchResults.find('.filter-category');
-		let allSearchHistory = []; // Store all search history for filtering
 
 		async function showSearchHistory(filterTerm = '') {
 			if (!config.loggedIn || !inputEl.is(':focus')) {
@@ -120,18 +267,16 @@ define('search', [
 			filterCategoryEl.addClass('hidden');
 
 			try {
-				// Fetch search history if not already loaded or if no filter term
-				if (!filterTerm || allSearchHistory.length === 0) {
-					const data = await api.get('/search/history', { limit: SEARCH_HISTORY_LIMIT });
-					allSearchHistory = data.searches || [];
-				}
-
-				// Filter search history based on input
-				let filteredSearches = allSearchHistory;
+				let filteredSearches;
+				
+				// Use autocomplete API for filtered results
 				if (filterTerm) {
-					filteredSearches = allSearchHistory.filter(search =>
-						search.query.toLowerCase().startsWith(filterTerm.toLowerCase())
-					);
+					const data = await api.get('/search/autocomplete', { query: filterTerm, limit: SEARCH_HISTORY_LIMIT });
+					filteredSearches = data.suggestions || [];
+				} else {
+					// Fetch all search history when no filter
+					const data = await api.get('/search/history', { limit: SEARCH_HISTORY_LIMIT });
+					filteredSearches = data.searches || [];
 				}
 
 				const data = {
@@ -358,7 +503,6 @@ define('search', [
 		quickSearchResults.on('click', '[component="search/history/clear"]', async function (e) {
 			e.preventDefault();
 			await api.del('/search/history').catch(() => {});
-			allSearchHistory = []; // Clear cached history
 			showSearchHistory();
 		});
 	};

@@ -28,3 +28,38 @@
 		background-color: rgba(255, 255, 255, 0.15) !important;
 	}
 }
+
+// Ghost text styling
+.search-ghost-text {
+	color: #999 !important;
+	user-select: none;
+}
+
+// Autocomplete dropdown
+.search-autocomplete-dropdown {
+	font-size: 0.875rem;
+	
+	.search-autocomplete-item {
+		transition: background-color 0.15s ease;
+		
+		&:hover {
+			background-color: rgba(0, 0, 0, 0.05);
+		}
+		
+		&:last-child {
+			border-bottom: none !important;
+		}
+	}
+}
+
+[data-bs-theme="dark"] {
+	.search-ghost-text {
+		color: #666 !important;
+	}
+	
+	.search-autocomplete-dropdown {
+		.search-autocomplete-item:hover {
+			background-color: rgba(255, 255, 255, 0.1);
+		}
+	}
+}

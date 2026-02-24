@@ -266,4 +266,142 @@ describe('Search', () => {
 			Date.now = originalNow;
 		}
 	});
+
+	describe('Search Autocomplete API', () => {
+		it('should return autocomplete suggestions based on search history', async () => {
+			const caller = { uid: gingerUid };
+			await searchApi.clearHistory(caller);
+
+			// Save some search history
+			await searchApi.saveHistory(caller, { query: 'epl', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'epic games', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'nodejs', searchIn: 'titlesposts' });
+
+			// Test prefix match for 'e'
+			let result = await searchApi.autocomplete(caller, { query: 'e', limit: 10 });
+			assert(result.suggestions);
+			assert.strictEqual(result.suggestions.length, 2);
+			assert(result.suggestions.some(s => s.query === 'epl'));
+			assert(result.suggestions.some(s => s.query === 'epic games'));
+
+			// Test prefix match for 'ep'
+			result = await searchApi.autocomplete(caller, { query: 'ep', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 2);
+			assert(result.suggestions.some(s => s.query === 'epl'));
+			assert(result.suggestions.some(s => s.query === 'epic games'));
+
+			// Test prefix match for 'epi'
+			result = await searchApi.autocomplete(caller, { query: 'epi', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 1);
+			assert.strictEqual(result.suggestions[0].query, 'epic games');
+
+			// Test no match
+			result = await searchApi.autocomplete(caller, { query: 'xyz', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 0);
+
+			await searchApi.clearHistory(caller);
+		});
+
+		it('should return autocomplete suggestions in most recent order', async () => {
+			const caller = { uid: gingerUid };
+			const originalNow = Date.now;
+			let ts = 1700000000000;
+
+			Date.now = () => {
+				ts += 1000;
+				return ts;
+			};
+
+			try {
+				await searchApi.clearHistory(caller);
+
+				// Save searches with different timestamps
+				await searchApi.saveHistory(caller, { query: 'apple', searchIn: 'titlesposts' });
+				await searchApi.saveHistory(caller, { query: 'apricot', searchIn: 'titlesposts' });
+				await searchApi.saveHistory(caller, { query: 'avocado', searchIn: 'titlesposts' });
+
+				const result = await searchApi.autocomplete(caller, { query: 'a', limit: 10 });
+				assert.strictEqual(result.suggestions.length, 3);
+				// Most recent should be first
+				assert.strictEqual(result.suggestions[0].query, 'avocado');
+				assert.strictEqual(result.suggestions[1].query, 'apricot');
+				assert.strictEqual(result.suggestions[2].query, 'apple');
+
+				await searchApi.clearHistory(caller);
+			} finally {
+				Date.now = originalNow;
+			}
+		});
+
+		it('should respect the limit parameter', async () => {
+			const caller = { uid: gingerUid };
+			await searchApi.clearHistory(caller);
+
+			// Save multiple searches with same prefix
+			await searchApi.saveHistory(caller, { query: 'test1', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'test2', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'test3', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'test4', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'test5', searchIn: 'titlesposts' });
+
+			const result = await searchApi.autocomplete(caller, { query: 'test', limit: 3 });
+			assert.strictEqual(result.suggestions.length, 3);
+
+			await searchApi.clearHistory(caller);
+		});
+
+		it('should be case-insensitive for prefix matching', async () => {
+			const caller = { uid: gingerUid };
+			await searchApi.clearHistory(caller);
+
+			await searchApi.saveHistory(caller, { query: 'NodeBB', searchIn: 'titlesposts' });
+			await searchApi.saveHistory(caller, { query: 'NODEJS', searchIn: 'titlesposts' });
+
+			// Test lowercase query
+			let result = await searchApi.autocomplete(caller, { query: 'node', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 2);
+
+			// Test uppercase query
+			result = await searchApi.autocomplete(caller, { query: 'NODE', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 2);
+
+			// Test mixed case query
+			result = await searchApi.autocomplete(caller, { query: 'NoDe', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 2);
+
+			await searchApi.clearHistory(caller);
+		});
+
+		it('should return empty array for empty query', async () => {
+			const caller = { uid: gingerUid };
+			const result = await searchApi.autocomplete(caller, { query: '', limit: 10 });
+			assert.deepStrictEqual(result.suggestions, []);
+		});
+
+		it('should only return suggestions from user\'s own search history', async () => {
+			const caller1 = { uid: phoebeUid };
+			const caller2 = { uid: gingerUid };
+
+			await searchApi.clearHistory(caller1);
+			await searchApi.clearHistory(caller2);
+
+			// User 1 searches for 'mongodb'
+			await searchApi.saveHistory(caller1, { query: 'mongodb', searchIn: 'titlesposts' });
+
+			// User 2 should not see user 1's search
+			const result = await searchApi.autocomplete(caller2, { query: 'm', limit: 10 });
+			assert.strictEqual(result.suggestions.length, 0);
+
+			// User 2 searches for 'mysql'
+			await searchApi.saveHistory(caller2, { query: 'mysql', searchIn: 'titlesposts' });
+
+			// User 2 should only see their own search
+			const result2 = await searchApi.autocomplete(caller2, { query: 'm', limit: 10 });
+			assert.strictEqual(result2.suggestions.length, 1);
+			assert.strictEqual(result2.suggestions[0].query, 'mysql');
+
+			await searchApi.clearHistory(caller1);
+			await searchApi.clearHistory(caller2);
+		});
+	});
 });
