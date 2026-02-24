@@ -14,6 +14,63 @@ const utils = require('../utils');
 const controllersHelpers = require('../controllers/helpers');
 
 const searchApi = module.exports;
+const SEARCH_HISTORY_LIMIT = 10;
+
+function getSearchHistoryKey(uid) {
+	return `uid:${uid}:search:history`;
+}
+
+searchApi.getHistory = async (caller, data = {}) => {
+	if (!(caller.uid > 0)) {
+		throw new Error('[[error:no-privileges]]');
+	}
+
+	const limit = Math.max(1, Math.min(50, parseInt(data.limit, 10) || SEARCH_HISTORY_LIMIT));
+	const searches = await db.getSortedSetRevRangeWithScores(getSearchHistoryKey(caller.uid), 0, limit - 1);
+
+	return {
+		searches: searches.map(item => ({
+			query: String(item.value),
+			timestamp: item.score,
+		})),
+	};
+};
+
+searchApi.clearHistory = async (caller) => {
+	if (!(caller.uid > 0)) {
+		throw new Error('[[error:no-privileges]]');
+	}
+
+	await db.delete(getSearchHistoryKey(caller.uid));
+	return {};
+};
+
+searchApi.saveHistory = async (caller, data = {}) => {
+	if (!(caller.uid > 0)) {
+		throw new Error('[[error:no-privileges]]');
+	}
+
+	const query = String(data.query || '').trim().slice(0, 255);
+	if (!query.length) {
+		return {};
+	}
+
+	const searchIn = data.searchIn || 'titlesposts';
+	if (!['titles', 'titlesposts', 'posts', 'bookmarks'].includes(searchIn)) {
+		return {};
+	}
+
+	const key = getSearchHistoryKey(caller.uid);
+	await db.sortedSetRemove(key, query);
+	await db.sortedSetAdd(key, Date.now(), query);
+
+	const extraEntries = await db.getSortedSetRevRange(key, SEARCH_HISTORY_LIMIT, -1);
+	if (extraEntries.length) {
+		await db.sortedSetRemove(key, extraEntries);
+	}
+
+	return {};
+};
 
 searchApi.categories = async (caller, data) => {
 	// used by categorySearch module

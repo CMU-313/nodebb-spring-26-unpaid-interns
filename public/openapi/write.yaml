@@ -256,6 +256,8 @@ paths:
     $ref: 'write/flags/flagId/notes/datetime.yaml'
   /search/categories:
     $ref: 'write/search/categories.yaml'
+  /search/history:
+    $ref: 'write/search/history.yaml'
   /search/chats/{roomId}/users:
     $ref: 'write/search/chats/roomId/users.yaml'
   /search/chats/{roomId}/messages:
