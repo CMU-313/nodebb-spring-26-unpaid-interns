@@ -1,6 +1,6 @@
 'use strict';
 
-define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'], function (components, translator, Benchpress, api) {
+define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 'alerts'], function (components, translator, Benchpress, api, alerts) {
 	const PollViewer = {};
 
 	PollViewer.init = function () {
@@ -60,31 +60,64 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'],
 			if (!container.length) return;
 
 			let html = `
-				<div class="card mb-3">
-					<div class="card-header">
-						<i class="fa fa-bar-chart"></i> ${poll.title}
-					</div>
-					<div class="card-body">
-						<h5 class="card-title">${poll.question}</h5>
-						<ul class="list-group list-group-flush">
+				<div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+					<h3>${poll.title}</h3>
+					<p><b>${poll.question}</b></p>
+					<ul>
 			`;
 
-			poll.options.forEach(option => {
+			if (poll.hasVoted || !app.user.uid) {
+				poll.options.forEach(option => {
+					html += `
+						<li>
+							${option.text}
+							<span>(${option.votes || 0} votes)</span>
+						</li>
+					`;
+				});
+			} else {
+				html += `<form id="vote-form-${safePollId}">`;
+				poll.options.forEach(option => {
+					html += `
+						<li style="list-style-type: none;">
+							<label>
+								<input type="radio" name="poll-option-${safePollId}" value="${option.optionId}">
+								${option.text}
+							</label>
+						</li>
+					`;
+				});
 				html += `
-					<li class="list-group-item d-flex justify-content-between align-items-center">
-						${option.text}
-						<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
-					</li>
+						<li style="list-style-type: none;">
+							<button type="button" id="vote-btn-${safePollId}" style="margin-top: 10px;">Vote</button>
+						</li>
+					</form>
 				`;
-			});
+			}
 
 			html += `
-						</ul>
-					</div>
+					</ul>
 				</div>
 			`;
 
 			container.html(html);
+
+			if (!poll.hasVoted && app.user.uid) {
+				$(`#vote-btn-${safePollId}`).on('click', function () {
+					const selectedOption = $(`input[name="poll-option-${safePollId}"]:checked`).val();
+					if (selectedOption === undefined) {
+						alerts.error('Please select an option to vote.');
+						return;
+					}
+
+					api.post(`/api/polls/${pollId}/vote`, { optionId: selectedOption }).then(() => {
+						alerts.success('Vote cast successfully!');
+						renderPoll(pollId, safePollId); // Re-render to show results
+					}).catch(err => {
+						alerts.error(err.message || 'Failed to cast vote.');
+					});
+				});
+			}
 		}).catch((err) => {
 			console.error('Error loading poll:', err);
 			$(`#poll-${safePollId}`).html(`<div class="alert alert-danger">Error loading poll: ${err.message}</div>`);
