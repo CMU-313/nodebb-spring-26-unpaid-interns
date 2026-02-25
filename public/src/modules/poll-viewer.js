@@ -60,18 +60,21 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 			if (!container.length) return;
 
 			let html = `
-				<div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
-					<h3>${poll.title}</h3>
-					<p><b>${poll.question}</b></p>
-					<ul>
+				<div class="card mb-3">
+					<div class="card-header">
+						<i class="fa fa-bar-chart"></i> ${poll.title}
+					</div>
+					<div class="card-body">
+						<h5 class="card-title">${poll.question}</h5>
+						<ul class="list-group list-group-flush">
 			`;
 
 			if (poll.hasVoted || !app.user.uid) {
 				poll.options.forEach(option => {
 					html += `
-						<li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
 							${option.text}
-							<span>(${option.votes || 0} votes)</span>
+							<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
 						</li>
 					`;
 				});
@@ -79,24 +82,27 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 				html += `<form id="vote-form-${safePollId}">`;
 				poll.options.forEach(option => {
 					html += `
-						<li style="list-style-type: none;">
-							<label>
-								<input type="radio" name="poll-option-${safePollId}" value="${option.optionId}">
-								${option.text}
-							</label>
+						<li class="list-group-item">
+							<div class="form-check">
+								<input class="form-check-input" type="radio" name="poll-option-${safePollId}" id="option-${safePollId}-${option.optionId}" value="${option.optionId}">
+								<label class="form-check-label" for="option-${safePollId}-${option.optionId}">
+									${option.text}
+								</label>
+							</div>
 						</li>
 					`;
 				});
 				html += `
-						<li style="list-style-type: none;">
-							<button type="button" id="vote-btn-${safePollId}" style="margin-top: 10px;">Vote</button>
+						<li class="list-group-item">
+							<button type="button" class="btn btn-primary btn-sm mt-2" id="vote-btn-${safePollId}">Vote</button>
 						</li>
 					</form>
 				`;
 			}
 
 			html += `
-					</ul>
+						</ul>
+					</div>
 				</div>
 			`;
 
