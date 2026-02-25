@@ -54,7 +54,7 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 		}
 	}
 
-	function renderPoll(pollId, safePollId) {
+	function renderPoll(pollId, safePollId, forceVotingMode = false) {
 		api.get(`/api/polls/${pollId}`, {}).then((poll) => {
 			const container = $(`#poll-${safePollId}`);
 			if (!container.length) return;
@@ -69,7 +69,9 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 						<ul class="list-group list-group-flush">
 			`;
 
-			if (poll.hasVoted || !app.user.uid) {
+			const isVoting = forceVotingMode || (!poll.hasVoted && app.user.uid > 0);
+
+			if (!isVoting) {
 				poll.options.forEach(option => {
 					html += `
 						<li class="list-group-item d-flex justify-content-between align-items-center">
@@ -78,6 +80,14 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 						</li>
 					`;
 				});
+
+				if (poll.hasVoted && app.user.uid > 0) {
+					html += `
+						<li class="list-group-item">
+							<button type="button" class="btn btn-secondary btn-sm mt-2" id="change-vote-btn-${safePollId}">Change Vote</button>
+						</li>
+					`;
+				}
 			} else {
 				html += `<form id="vote-form-${safePollId}">`;
 				poll.options.forEach(option => {
@@ -108,7 +118,7 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 
 			container.html(html);
 
-			if (!poll.hasVoted && app.user.uid) {
+			if (isVoting) {
 				$(`#vote-btn-${safePollId}`).on('click', function () {
 					const selectedOption = $(`input[name="poll-option-${safePollId}"]:checked`).val();
 					if (selectedOption === undefined) {
@@ -122,6 +132,10 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 					}).catch(err => {
 						alerts.error(err.message || 'Failed to cast vote.');
 					});
+				});
+			} else if (poll.hasVoted && app.user.uid > 0) {
+				$(`#change-vote-btn-${safePollId}`).on('click', function () {
+					renderPoll(pollId, safePollId, true);
 				});
 			}
 		}).catch((err) => {

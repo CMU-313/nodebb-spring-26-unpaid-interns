@@ -12,10 +12,10 @@ Polls.create = async function (pollData) {
 	if (!title || !question || !options || !Array.isArray(options) || options.length < 2) {
 		throw new Error('Poll data not valid, need title, question, and at least 2 options');
 	}
-	
+
 	const timestamp = Date.now();
 	const pollId = `poll:${timestamp}`;
-	
+
 	//poll object
 	const poll = {
 		pollId: pollId,
@@ -30,10 +30,10 @@ Polls.create = async function (pollData) {
 		timestamp: timestamp,
 		totalVotes: 0,
 	};
-	
+
 	await db.setObject(pollId, poll);
 	await db.sortedSetAdd('polls:created', timestamp, pollId);
-	
+
 	// Parse options back for the return value
 	poll.options = JSON.parse(poll.options);
 	return poll;
@@ -83,23 +83,42 @@ Polls.delete = async function (pollId) {
 
 //vote on a poll
 Polls.vote = async function (pollId, optionId, uid) {
-	//check if user has already voted
-	const hasVoted = await db.isSetMember(`${pollId}:voters`, uid);
-	if (hasVoted) {
-		throw new Error('User has already voted on this poll');
-	}
-
 	//get the poll
 	const poll = await Polls.get(pollId);
 
-	//find the option and increment votes
-	const optionIndex = poll.options.findIndex(opt => opt.optionId === parseInt(optionId, 10));
-	if (optionIndex === -1) {
+	//find the new option index
+	const newOptionIndex = poll.options.findIndex(opt => opt.optionId === parseInt(optionId, 10));
+	if (newOptionIndex === -1) {
 		throw new Error('Option not found');
 	}
 
-	poll.options[optionIndex].votes += 1;
-	poll.totalVotes = (parseInt(poll.totalVotes, 10) || 0) + 1;
+	//check if user has already voted
+	const hasVoted = await db.isSetMember(`${pollId}:voters`, uid);
+
+	if (hasVoted) {
+		// Get the old vote
+		const oldOptionIdStr = await db.getObjectField(`${pollId}:responses`, uid);
+
+		// If they voted for the exact same thing, just return
+		if (oldOptionIdStr === String(optionId)) {
+			poll.hasVoted = true;
+			return poll;
+		}
+
+		// Decrement old option
+		const oldOptionIndex = poll.options.findIndex(opt => opt.optionId === parseInt(oldOptionIdStr, 10));
+		if (oldOptionIndex !== -1) {
+			poll.options[oldOptionIndex].votes = Math.max(0, poll.options[oldOptionIndex].votes - 1);
+		}
+		// totalVotes remains the same since they are just changing their vote
+	} else {
+		// New vote, increment total
+		poll.totalVotes = (parseInt(poll.totalVotes, 10) || 0) + 1;
+		await db.setAdd(`${pollId}:voters`, uid);
+	}
+
+	// Increment new option
+	poll.options[newOptionIndex].votes += 1;
 
 	//update the poll in the database
 	const pollToSave = {
@@ -109,8 +128,7 @@ Polls.vote = async function (pollId, optionId, uid) {
 
 	await db.setObject(pollId, pollToSave);
 
-	//record that the user has voted and store response
-	await db.setAdd(`${pollId}:voters`, uid);
+	//store new response
 	await db.setObjectField(`${pollId}:responses`, uid, optionId);
 
 	poll.hasVoted = true;
