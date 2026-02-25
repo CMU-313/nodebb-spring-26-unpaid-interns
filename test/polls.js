@@ -96,17 +96,29 @@ describe('Polls', () => {
 			assert.strictEqual(poll.hasVoted, true);
 		});
 
-		it('should not allow duplicate votes', async () => {
-			await assert.rejects(
-				Polls.vote(pollData.pollId, 1, uid),
-				/User has already voted/,
-			);
+		it('should allow user to change their vote', async () => {
+			const poll = await Polls.vote(pollData.pollId, 1, uid);
+			// Old option decremented
+			assert.strictEqual(poll.options[0].votes, 0);
+			// New option incremented
+			assert.strictEqual(poll.options[1].votes, 1);
+			// Total votes remains the same
+			assert.equal(poll.totalVotes, 1);
+			assert.strictEqual(poll.hasVoted, true);
+		});
+
+		it('should allow user to vote for the exact same option without incrementing', async () => {
+			const poll = await Polls.vote(pollData.pollId, 1, uid);
+			// Option votes and total votes remain unchanged
+			assert.strictEqual(poll.options[1].votes, 1);
+			assert.equal(poll.totalVotes, 1);
+			assert.strictEqual(poll.hasVoted, true);
 		});
 
 		it('should allow a different user to vote', async () => {
 			const poll = await Polls.vote(pollData.pollId, 1, otherUid);
-			assert.strictEqual(poll.options[1].votes, 1);
-			assert.strictEqual(poll.totalVotes, 2);
+			assert.strictEqual(poll.options[1].votes, 2); // UID 1 and UID 2 both voted for option 1
+			assert.equal(poll.totalVotes, 2);
 		});
 
 		it('should throw for invalid optionId', async () => {
