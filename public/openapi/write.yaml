@@ -258,6 +258,8 @@ paths:
     $ref: 'write/search/categories.yaml'
   /search/history:
     $ref: 'write/search/history.yaml'
+  /search/autocomplete:
+    $ref: 'write/search/autocomplete.yaml'
   /search/chats/{roomId}/users:
     $ref: 'write/search/chats/roomId/users.yaml'
   /search/chats/{roomId}/messages:

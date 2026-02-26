@@ -13,6 +13,10 @@ Search.history = async (req, res) => {
 	helpers.formatApiResponse(200, res, await api.search.getHistory(req, req.query));
 };
 
+Search.autocomplete = async (req, res) => {
+	helpers.formatApiResponse(200, res, await api.search.autocomplete(req, req.query));
+};
+
 Search.saveHistory = async (req, res) => {
 	helpers.formatApiResponse(200, res, await api.search.saveHistory(req, req.body));
 };

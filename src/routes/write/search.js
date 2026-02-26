@@ -15,6 +15,7 @@ module.exports = function () {
 
 	setupApiRoute(router, 'get', '/categories', [], controllers.write.search.categories);
 	setupApiRoute(router, 'get', '/history', [...middlewares], controllers.write.search.history);
+	setupApiRoute(router, 'get', '/autocomplete', [...middlewares], controllers.write.search.autocomplete);
 	setupApiRoute(router, 'post', '/history', [...middlewares], controllers.write.search.saveHistory);
 	setupApiRoute(router, 'delete', '/history', [...middlewares], controllers.write.search.clearHistory);
 
