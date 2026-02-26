@@ -1,6 +1,6 @@
 'use strict';
 
-define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'], function (components, translator, Benchpress, api) {
+define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 'alerts'], function (components, translator, Benchpress, api, alerts) {
 	const PollViewer = {};
 
 	PollViewer.init = function () {
@@ -54,7 +54,7 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'],
 		}
 	}
 
-	function renderPoll(pollId, safePollId) {
+	function renderPoll(pollId, safePollId, forceVotingMode = false) {
 		api.get(`/api/polls/${pollId}`, {}).then((poll) => {
 			const container = $(`#poll-${safePollId}`);
 			if (!container.length) return;
@@ -69,14 +69,46 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'],
 						<ul class="list-group list-group-flush">
 			`;
 
-			poll.options.forEach(option => {
+			const isVoting = forceVotingMode || (!poll.hasVoted && app.user.uid > 0);
+
+			if (!isVoting) {
+				poll.options.forEach(option => {
+					html += `
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							${option.text}
+							<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
+						</li>
+					`;
+				});
+
+				if (poll.hasVoted && app.user.uid > 0) {
+					html += `
+						<li class="list-group-item">
+							<button type="button" class="btn btn-secondary btn-sm mt-2" id="change-vote-btn-${safePollId}">Change Vote</button>
+						</li>
+					`;
+				}
+			} else {
+				html += `<form id="vote-form-${safePollId}">`;
+				poll.options.forEach(option => {
+					html += `
+						<li class="list-group-item">
+							<div class="form-check">
+								<input class="form-check-input" type="radio" name="poll-option-${safePollId}" id="option-${safePollId}-${option.optionId}" value="${option.optionId}">
+								<label class="form-check-label" for="option-${safePollId}-${option.optionId}">
+									${option.text}
+								</label>
+							</div>
+						</li>
+					`;
+				});
 				html += `
-					<li class="list-group-item d-flex justify-content-between align-items-center">
-						${option.text}
-						<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
-					</li>
+						<li class="list-group-item">
+							<button type="button" class="btn btn-primary btn-sm mt-2" id="vote-btn-${safePollId}">Vote</button>
+						</li>
+					</form>
 				`;
-			});
+			}
 
 			html += `
 						</ul>
@@ -85,6 +117,27 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api'],
 			`;
 
 			container.html(html);
+
+			if (isVoting) {
+				$(`#vote-btn-${safePollId}`).on('click', function () {
+					const selectedOption = $(`input[name="poll-option-${safePollId}"]:checked`).val();
+					if (selectedOption === undefined) {
+						alerts.error('Please select an option to vote.');
+						return;
+					}
+
+					api.post(`/api/polls/${pollId}/vote`, { optionId: selectedOption }).then(() => {
+						alerts.success('Vote cast successfully!');
+						renderPoll(pollId, safePollId); // Re-render to show results
+					}).catch(err => {
+						alerts.error(err.message || 'Failed to cast vote.');
+					});
+				});
+			} else if (poll.hasVoted && app.user.uid > 0) {
+				$(`#change-vote-btn-${safePollId}`).on('click', function () {
+					renderPoll(pollId, safePollId, true);
+				});
+			}
 		}).catch((err) => {
 			console.error('Error loading poll:', err);
 			$(`#poll-${safePollId}`).html(`<div class="alert alert-danger">Error loading poll: ${err.message}</div>`);
