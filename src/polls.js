@@ -38,6 +38,7 @@ Polls.create = async function (pollData) {
 		creatorUid: creatorUid,
 		timestamp: timestamp,
 		totalVotes: 0,
+		isClosed: 0,
 	};
 
 	await db.setObject(pollId, poll);
@@ -59,6 +60,7 @@ Polls.get = async function (pollId, uid) {
 	}
 	poll.hasVoted = await db.isSetMember(`${pollId}:voters`, uid);
 	poll.isCreator = uid !== undefined && String(poll.creatorUid) === String(uid);
+	poll.isClosed = poll.isClosed === 1 || poll.isClosed === '1';
 	addPercentages(poll);
 	return poll;
 };
@@ -98,6 +100,10 @@ Polls.delete = async function (pollId) {
 Polls.vote = async function (pollId, optionId, uid) {
 	//get the poll
 	const poll = await Polls.get(pollId, uid);
+
+	if (poll.isClosed) {
+		throw new Error('Poll is closed');
+	}
 
 	//find the new option index
 	const newOptionIndex = poll.options.findIndex(opt => opt.optionId === parseInt(optionId, 10));
@@ -146,5 +152,22 @@ Polls.vote = async function (pollId, optionId, uid) {
 
 	addPercentages(poll);
 	poll.hasVoted = true;
+	return poll;
+};
+
+//close a poll (creator only)
+Polls.close = async function (pollId, uid) {
+	const poll = await Polls.get(pollId, uid);
+
+	if (!poll.isCreator) {
+		throw new Error('Only the poll creator can close a poll');
+	}
+
+	if (poll.isClosed) {
+		throw new Error('Poll is already closed');
+	}
+
+	await db.setObjectField(pollId, 'isClosed', 1);
+	poll.isClosed = true;
 	return poll;
 };

@@ -49,6 +49,15 @@ pollsController.delete = async function (req, res, next) {
 	}
 };
 
+pollsController.close = async function (req, res, next) {
+	try {
+		const poll = await Polls.close(req.params.pollId, req.uid);
+		res.json(poll);
+	} catch (err) {
+		next(err);
+	}
+};
+
 pollsController.vote = async function (req, res, next) {
 	try {
 		const { optionId } = req.body;

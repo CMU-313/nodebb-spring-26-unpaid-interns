@@ -153,6 +153,51 @@ describe('Polls', () => {
 		});
 	});
 
+	describe('.close()', () => {
+		let closePoll;
+
+		before(async () => {
+			closePoll = await Polls.create({
+				title: 'Close Test',
+				question: 'Close?',
+				options: ['Yes', 'No'],
+				creatorUid: uid,
+			});
+		});
+
+		it('should close a poll when called by the creator', async () => {
+			const poll = await Polls.close(closePoll.pollId, uid);
+			assert.strictEqual(poll.isClosed, true);
+		});
+
+		it('should throw when voting on a closed poll', async () => {
+			await assert.rejects(
+				Polls.vote(closePoll.pollId, 0, otherUid),
+				/Poll is closed/,
+			);
+		});
+
+		it('should throw when closing an already closed poll', async () => {
+			await assert.rejects(
+				Polls.close(closePoll.pollId, uid),
+				/Poll is already closed/,
+			);
+		});
+
+		it('should throw when a non-creator tries to close', async () => {
+			const anotherPoll = await Polls.create({
+				title: 'Another',
+				question: 'Q',
+				options: ['A', 'B'],
+				creatorUid: uid,
+			});
+			await assert.rejects(
+				Polls.close(anotherPoll.pollId, otherUid),
+				/Only the poll creator/,
+			);
+		});
+	});
+
 	describe('.delete()', () => {
 		it('should delete a poll', async () => {
 			const tempPoll = await Polls.create({
