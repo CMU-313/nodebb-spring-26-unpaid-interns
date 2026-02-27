@@ -216,7 +216,7 @@ Response: {
 6. Test keyboard navigation and click interactions
 
 ### Automated Tests
-Location: Tests can be found in [`test/search.js`](https:github.com/CMU-313/nodebb-spring-26-unpaid-interns/blob/main/test/search.js)
+Location: Tests can be found in [`test/search.js`](https://github.com/CMU-313/nodebb-spring-26-unpaid-interns/blob/main/test/search.js)
 
 What is being Tested
 **Search History Tests**
