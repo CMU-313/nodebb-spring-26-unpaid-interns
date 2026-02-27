@@ -1,4 +1,4 @@
-# User Guide: Polls Feature
+# 1. User Guide: Polls Feature
 
 ## Overview
 
@@ -109,3 +109,136 @@ The test suite contains **14 unit tests** covering all backend poll operations u
 - the vote tests use two distinct user IDs (`uid` and `otherUid`) to verify that per-user vote tracking is isolated correctly.
 - the `hasVoted` test after voting confirms that vote state is durably stored, not just returned in-memory from the vote call.
 - boundary conditions (missing title, single option, invalid optionId) are explicitly tested to guard against regressions in validation logic.
+
+
+
+
+
+# 2. User Guide: Search Automplete Implementation
+
+## Overview
+This implementation adds search autocomplete functionality to NodeBB's search bar based on the user's past search history. When a user starts typing in the search bar, a dropdown appears showing their previous searches that match what they have typed so far.
+
+## Features Implemeted
+- Autocomplete Dropdown: Shows filtered search history as user types
+- Prefix Matching: Filters search history based on what the user has typed
+- Keyboard Navigaton: Arrow keys to navigate suggestions
+-    Enter to select
+-    Escape to close
+- Click Interaction: Click on a suggestion to perform that search
+
+## Styling
+- Custom SCSS styles in public/scss/modules/search-autocomplete.scss
+- Dark mode support
+- Hover and focus states for accessibility
+- Consistent with NodeBB's design system
+
+## Files Modified
+
+### Backend Files
+**1. src/api/search.js**
+- Added 'searchApi.autocomplete()' function for prefix-matched suggestions
+- Existing 'searchApi.getHistory()', 'searchApi.saveHistory()' and 'searchApi.clearHistory()' already implemented
+
+**2. src/routes/write/search.js**
+- Added route: 'GET /autocomplete' mapped to controller
+
+3. src/controllers/write/search.js
+- Added 'Search.autocomplete()' controlled method
+
+### Frontend Files
+**1. public/src/modules/search.js**
+- Modified 'searchShowHistory()' function to use autocomplete API when filtering
+- Full search history when input is empty
+
+**2. public/scss/modules/search-autocomplete.scss**
+- Already contains styles for search history items
+- Includes hover states and dark mode support
+
+**3. public/scss/client.scss**
+- Already imports the search-autocomplete module
+
+**4. src/views/partials/quick-search-history.tp1**
+- Template for rendering search history dropdown (already exists)
+
+## How It Works
+
+### User Flow
+1. User clicks on the search bar
+2. If empty, shows all recent searches (up to 10)
+3. As user types characters, autocomplete API filters history with prefix match
+4. User can click a suggestion or press Enter to execute that search
+5. Search is saved to history when submitted
+
+### Technical Flow
+1. Input Event: Debounced (300ms) > Check query
+2. 0 chars: Call /api/v3/search/history > Show all history
+3. 1-2 chars: Call /api/v3/search/autocomplete?query=<term> > Show filtered results
+4. On Submit: Call 'POST /api/v3/search/history > Save to database
+
+## Database Schema
+- Key: uid:<uid>:search:history
+- Type: Redis Sorted Set
+- Score: Timestamp (Date.now())
+- Value: Search query string
+- Limit: 10 most recent searches per user
+
+## API Example
+
+### Get Autocomplete Suggestions
+```bash
+GET /api/v3/search/autocomplete?query=ep
+Response: {
+"suggestions" [
+   {"query": "epl", "timestamp": 1708794000000},
+   {"query": "epic games", "timestamp": 1708793000000},
+]
+}
+```
+### Get Full History
+```bash
+GET /api/v3/search/history?limit=10
+Response: {
+"searches" [
+   {"query": "nodejs", "timestamp": 1708794000000},
+   {"query": "epl", "timestamp": 1708793000000},
+]
+}
+```
+
+## Testing
+### To test the implementation:
+1. Start NodeBB: `./nodebb start`
+2. Log in as a user
+3. Perform several searches
+4. Start typing in the search bar
+5. Verify autocomplete suggestions appear
+6. Test keyboard navigation and click interactions
+
+### Automated Tests
+Location: Tests can be found in [`test/search.js`](https:github.com/CMU-313/nodebb-spring-26-unpaid-interns/blob/main/test/search.js)
+
+What is being Tested
+**Search History Tests**
+- Saving search queries to a user's history
+- Loading history in most-recent-first order
+- Re-searching a query moves it to the top of the history
+- Hiistory is capped at 10 entries, with the oldest removed when the limit is exceeded
+- Clearing a user's search history
+
+**Search Autocomplete Tests**
+- Returning suggestions that match a given prefix (eg: typing "ep" suggests "epl")
+- Suggestions are ordered by most recent first
+- The limit parameter correctly restricts the number of results returned
+- Prefix matching is case insensitive (eg: "node", "NODE" and "NoDe" return same results)
+- An empty query returns no suggestions
+- Users only see autocomplete suggestions from their own search history, not other users'
+
+## General Notes
+- Autocomplete only works for logged-in users
+- Search history is private to each user
+- Maximum 10 searches stored per user
+- Prefix matching is case-insensitive
+- Integration with existing NodeBB search functionality maintained
+
+
