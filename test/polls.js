@@ -64,6 +64,21 @@ describe('Polls', () => {
 			assert.strictEqual(poll.hasVoted, false);
 		});
 
+		it('should set isCreator true for the creator', async () => {
+			const poll = await Polls.get(pollData.pollId, uid);
+			assert.strictEqual(poll.isCreator, true);
+		});
+
+		it('should set isCreator false for a non-creator', async () => {
+			const poll = await Polls.get(pollData.pollId, otherUid);
+			assert.strictEqual(poll.isCreator, false);
+		});
+
+		it('should include percentage 0 on each option before any votes', async () => {
+			const poll = await Polls.get(pollData.pollId, uid);
+			poll.options.forEach(opt => assert.strictEqual(opt.percentage, 0));
+		});
+
 		it('should throw for non-existent poll', async () => {
 			await assert.rejects(
 				Polls.get('poll:nonexistent', uid),
@@ -121,10 +136,64 @@ describe('Polls', () => {
 			assert.equal(poll.totalVotes, 2);
 		});
 
+		it('should include correct percentages after voting', async () => {
+			const poll = await Polls.get(pollData.pollId, uid);
+			const total = parseInt(poll.totalVotes, 10);
+			poll.options.forEach(opt => {
+				const expected = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+				assert.strictEqual(opt.percentage, expected);
+			});
+		});
+
 		it('should throw for invalid optionId', async () => {
 			await assert.rejects(
 				Polls.vote(pollData.pollId, 999, 3),
 				/Option not found/,
+			);
+		});
+	});
+
+	describe('.close()', () => {
+		let closePoll;
+
+		before(async () => {
+			closePoll = await Polls.create({
+				title: 'Close Test',
+				question: 'Close?',
+				options: ['Yes', 'No'],
+				creatorUid: uid,
+			});
+		});
+
+		it('should close a poll when called by the creator', async () => {
+			const poll = await Polls.close(closePoll.pollId, uid);
+			assert.strictEqual(poll.isClosed, true);
+		});
+
+		it('should throw when voting on a closed poll', async () => {
+			await assert.rejects(
+				Polls.vote(closePoll.pollId, 0, otherUid),
+				/Poll is closed/,
+			);
+		});
+
+		it('should throw when closing an already closed poll', async () => {
+			await assert.rejects(
+				Polls.close(closePoll.pollId, uid),
+				/Poll is already closed/,
+			);
+		});
+
+		it('should throw when a non-creator tries to close', async () => {
+			const anotherPoll = await Polls.create({
+				title: 'Another',
+				question: 'Q',
+				options: ['A', 'B'],
+				creatorUid: uid,
+			});
+			await assert.rejects(
+				Polls.close(anotherPoll.pollId, otherUid),
+				/Only the poll creator/,
 			);
 		});
 	});
