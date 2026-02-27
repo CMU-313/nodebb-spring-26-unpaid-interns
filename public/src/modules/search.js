@@ -106,8 +106,8 @@ define('search', [
 
 		// Handle keyboard navigation for inline autocomplete
 		function handleKeyDown(e) {
-			// Right Arrow to accept inline suggestion
-			if (e.key === 'ArrowRight' && ghostTextEl && ghostTextEl.text() && currentHistorySuggestion) {
+			// Right Arrow or Tab to accept inline suggestion
+			if ((e.key === 'ArrowRight' || e.key === 'Tab') && ghostTextEl && ghostTextEl.text() && currentHistorySuggestion) {
 				// Only accept if cursor is at the end of the input
 				const cursorPos = inputEl[0].selectionStart;
 				const inputLength = inputEl.val().length;
@@ -444,6 +444,10 @@ define('search', [
 		inputEl.on('focus', function () {
 			const query = inputEl.val();
 			oldValue = query;
+			// Trigger inline autocomplete to restore ghost text if there's a search query
+			if (query.length > 0) {
+				inputEl.trigger('input');
+			}
 			if (!query.length) {
 				showSearchHistory();
 				return;
