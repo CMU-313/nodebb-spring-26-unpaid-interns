@@ -61,30 +61,53 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 
 			let html = `
 				<div class="card mb-3">
-					<div class="card-header">
-						<i class="fa fa-bar-chart"></i> ${poll.title}
+					<div class="card-header d-flex justify-content-between align-items-center">
+						<span><i class="fa fa-bar-chart"></i> ${poll.title}</span>
+						${poll.isClosed ? '<span class="badge bg-secondary">Closed</span>' : ''}
 					</div>
 					<div class="card-body">
 						<h5 class="card-title">${poll.question}</h5>
 						<ul class="list-group list-group-flush">
 			`;
 
-			const isVoting = forceVotingMode || (!poll.hasVoted && app.user.uid > 0);
+			const isVoting = forceVotingMode || (!poll.hasVoted && !poll.isCreator && app.user.uid > 0 && !poll.isClosed);
 
 			if (!isVoting) {
 				poll.options.forEach(option => {
-					html += `
-						<li class="list-group-item d-flex justify-content-between align-items-center">
-							${option.text}
-							<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
-						</li>
-					`;
+					if (poll.isCreator) {
+						html += `
+							<li class="list-group-item">
+								<div class="d-flex justify-content-between mb-1">
+									<span>${option.text}</span>
+									<span>${option.votes || 0} vote${option.votes !== 1 ? 's' : ''} (${option.percentage}%)</span>
+								</div>
+								<div class="progress" style="height: 8px;">
+									<div class="progress-bar" role="progressbar" style="width: ${option.percentage}%" aria-valuenow="${option.percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+								</div>
+							</li>
+						`;
+					} else {
+						html += `
+							<li class="list-group-item d-flex justify-content-between align-items-center">
+								${option.text}
+								<span class="badge bg-primary rounded-pill">${option.votes || 0}</span>
+							</li>
+						`;
+					}
 				});
 
-				if (poll.hasVoted && app.user.uid > 0) {
+				if (poll.hasVoted && app.user.uid > 0 && !poll.isClosed && !poll.isCreator) {
 					html += `
 						<li class="list-group-item">
 							<button type="button" class="btn btn-secondary btn-sm mt-2" id="change-vote-btn-${safePollId}">Change Vote</button>
+						</li>
+					`;
+				}
+
+				if (poll.isCreator && !poll.isClosed) {
+					html += `
+						<li class="list-group-item">
+							<button type="button" class="btn btn-danger btn-sm mt-2" id="close-poll-btn-${safePollId}">Close Poll</button>
 						</li>
 					`;
 				}
@@ -133,9 +156,20 @@ define('modules/poll-viewer', ['components', 'translator', 'benchpress', 'api', 
 						alerts.error(err.message || 'Failed to cast vote.');
 					});
 				});
-			} else if (poll.hasVoted && app.user.uid > 0) {
+			} else if (poll.hasVoted && app.user.uid > 0 && !poll.isClosed && !poll.isCreator) {
 				$(`#change-vote-btn-${safePollId}`).on('click', function () {
 					renderPoll(pollId, safePollId, true);
+				});
+			}
+
+			if (poll.isCreator && !poll.isClosed) {
+				$(`#close-poll-btn-${safePollId}`).on('click', function () {
+					api.post(`/api/polls/${pollId}/close`, {}).then(() => {
+						alerts.success('Poll closed.');
+						renderPoll(pollId, safePollId);
+					}).catch(err => {
+						alerts.error(err.message || 'Failed to close poll.');
+					});
 				});
 			}
 		}).catch((err) => {
