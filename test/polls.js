@@ -64,6 +64,21 @@ describe('Polls', () => {
 			assert.strictEqual(poll.hasVoted, false);
 		});
 
+		it('should set isCreator true for the creator', async () => {
+			const poll = await Polls.get(pollData.pollId, uid);
+			assert.strictEqual(poll.isCreator, true);
+		});
+
+		it('should set isCreator false for a non-creator', async () => {
+			const poll = await Polls.get(pollData.pollId, otherUid);
+			assert.strictEqual(poll.isCreator, false);
+		});
+
+		it('should include percentage 0 on each option before any votes', async () => {
+			const poll = await Polls.get(pollData.pollId, uid);
+			poll.options.forEach(opt => assert.strictEqual(opt.percentage, 0));
+		});
+
 		it('should throw for non-existent poll', async () => {
 			await assert.rejects(
 				Polls.get('poll:nonexistent', uid),
@@ -119,6 +134,15 @@ describe('Polls', () => {
 			const poll = await Polls.vote(pollData.pollId, 1, otherUid);
 			assert.strictEqual(poll.options[1].votes, 2); // UID 1 and UID 2 both voted for option 1
 			assert.equal(poll.totalVotes, 2);
+		});
+
+		it('should include correct percentages after voting', async () => {
+			const poll = await Polls.get(pollData.pollId, uid);
+			const total = parseInt(poll.totalVotes, 10);
+			poll.options.forEach(opt => {
+				const expected = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+				assert.strictEqual(opt.percentage, expected);
+			});
 		});
 
 		it('should throw for invalid optionId', async () => {

@@ -4,6 +4,15 @@ const db = require('./database');
 
 const Polls = module.exports;
 
+function addPercentages(poll) {
+	const totalVotes = parseInt(poll.totalVotes, 10) || 0;
+	poll.options = poll.options.map(option => ({
+		...option,
+		percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
+	}));
+	return poll;
+}
+
 //create a new poll
 Polls.create = async function (pollData) {
 	const { title, question, options, creatorUid } = pollData;
@@ -49,6 +58,8 @@ Polls.get = async function (pollId, uid) {
 		poll.options = JSON.parse(poll.options);
 	}
 	poll.hasVoted = await db.isSetMember(`${pollId}:voters`, uid);
+	poll.isCreator = uid !== undefined && String(poll.creatorUid) === String(uid);
+	addPercentages(poll);
 	return poll;
 };
 
@@ -70,6 +81,8 @@ Polls.getMultiple = async function (pollIds, uid) {
 		}
 		if (poll) {
 			poll.hasVoted = await db.isSetMember(`${poll.pollId}:voters`, uid);
+			poll.isCreator = uid !== undefined && String(poll.creatorUid) === String(uid);
+			addPercentages(poll);
 		}
 		return poll;
 	}));
@@ -84,7 +97,7 @@ Polls.delete = async function (pollId) {
 //vote on a poll
 Polls.vote = async function (pollId, optionId, uid) {
 	//get the poll
-	const poll = await Polls.get(pollId);
+	const poll = await Polls.get(pollId, uid);
 
 	//find the new option index
 	const newOptionIndex = poll.options.findIndex(opt => opt.optionId === parseInt(optionId, 10));
@@ -131,6 +144,7 @@ Polls.vote = async function (pollId, optionId, uid) {
 	//store new response
 	await db.setObjectField(`${pollId}:responses`, uid, optionId);
 
+	addPercentages(poll);
 	poll.hasVoted = true;
 	return poll;
 };
