@@ -155,14 +155,6 @@ define('search', [
 
 		inputEl.on('keydown', handleKeyDown);
 
-		inputEl.on('focus', function () {
-			// Restore ghost text when refocusing if there's text in the input
-			const query = inputEl.val();
-			if (query.length > 0) {
-				debouncedInlineSearch();
-			}
-		});
-
 		inputEl.on('blur', function () {
 			setTimeout(function () {
 				if (ghostTextEl) {
@@ -452,6 +444,10 @@ define('search', [
 		inputEl.on('focus', function () {
 			const query = inputEl.val();
 			oldValue = query;
+			// Trigger inline autocomplete to restore ghost text if there's a search query
+			if (query.length > 0) {
+				inputEl.trigger('input');
+			}
 			if (!query.length) {
 				showSearchHistory();
 				return;
