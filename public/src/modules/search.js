@@ -106,8 +106,8 @@ define('search', [
 
 		// Handle keyboard navigation for inline autocomplete
 		function handleKeyDown(e) {
-			// Right Arrow to accept inline suggestion
-			if (e.key === 'ArrowRight' && ghostTextEl && ghostTextEl.text() && currentHistorySuggestion) {
+			// Right Arrow or Tab to accept inline suggestion
+			if ((e.key === 'ArrowRight' || e.key === 'Tab') && ghostTextEl && ghostTextEl.text() && currentHistorySuggestion) {
 				// Only accept if cursor is at the end of the input
 				const cursorPos = inputEl[0].selectionStart;
 				const inputLength = inputEl.val().length;
