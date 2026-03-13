@@ -1,0 +1,7 @@
+
+> nodebb@4.8.0 analyze:dependency-cruiser
+> depcruise --config ../.dependency-cruiser.mjs ../app.js ../loader.js ../require-main.js ../src ../public/src
+
+
+✔ no dependency violations found (1019 modules, 4340 dependencies cruised)
+
