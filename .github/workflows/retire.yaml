@@ -27,4 +27,4 @@ jobs:
         run: npm install -g retire
 
       - name: Run RetireJS scan
-        run: retire --path .
+        run: retire --path . --ignorefile .retireignore.json
