@@ -1,19 +1,31 @@
 [
-  { "ignore": true, "cve": "CVE-2025-13465", "rationale": "lodash 4.17.21 - pending upgrade" },
-  { "ignore": true, "cve": "CVE-2026-27601", "rationale": "underscore 1.13.7 - pending upgrade" },
-  { "ignore": true, "cve": "CVE-2018-3721",  "rationale": "lodash 1.0.1 transitive via gaze" },
-  { "ignore": true, "cve": "CVE-2018-16487", "rationale": "lodash 1.0.1 transitive via gaze" },
-  { "ignore": true, "cve": "CVE-2019-10744", "rationale": "lodash 1.0.1 transitive via gaze" },
-  { "ignore": true, "cve": "CVE-2021-23337", "rationale": "lodash 1.0.1 transitive via gaze" },
-  { "ignore": true, "cve": "CVE-2026-2327",  "rationale": "markdown-it 14.1.0 - pending upgrade to 14.1.1" },
-  { "ignore": true, "cve": "CVE-2026-27125", "rationale": "svelte 4.2.20 SSR only - pending upgrade" },
-  { "ignore": true, "cve": "CVE-2026-27121", "rationale": "svelte 4.2.20 SSR only - pending upgrade" },
-  { "ignore": true, "cve": "CVE-2026-27122", "rationale": "svelte 4.2.20 SSR only - pending upgrade" },
-  { "ignore": true, "cve": "CVE-2026-27901", "rationale": "svelte 4.2.20 SSR only - pending upgrade" },
-  { "ignore": true, "cve": "CVE-2012-6708",  "rationale": "jquery 1.7.2 test fixture in mousetrap" },
-  { "ignore": true, "cve": "CVE-2020-7656",  "rationale": "jquery 1.7.2 test fixture in mousetrap" },
-  { "ignore": true, "cve": "CVE-2015-9251",  "rationale": "jquery 1.7.2 test fixture in mousetrap" },
-  { "ignore": true, "cve": "CVE-2019-11358", "rationale": "jquery 1.7.2 test fixture in mousetrap" },
-  { "ignore": true, "cve": "CVE-2020-11023", "rationale": "jquery 1.7.2 test fixture in mousetrap" },
-  { "ignore": true, "cve": "CVE-2020-11022", "rationale": "jquery 1.7.2 test fixture in mousetrap" }
+  {
+    "component": "lodash",
+    "version": "4.17.21",
+    "justification": "Pre-existing in NodeBB codebase - pending upgrade to 4.17.23"
+  },
+  {
+    "component": "underscore.js",
+    "version": "1.13.7",
+    "justification": "Pre-existing in NodeBB codebase - pending upgrade to 1.13.8"
+  },
+  {
+    "component": "lodash",
+    "version": "1.0.1",
+    "justification": "Transitive dependency via gaze - cannot upgrade directly"
+  },
+  {
+    "component": "markdown-it",
+    "version": "14.1.0",
+    "justification": "Pre-existing in NodeBB codebase - pending upgrade to 14.1.1"
+  },
+  {
+    "component": "svelte",
+    "version": "4.2.20",
+    "justification": "Pre-existing in nodebb-plugin-emoji - SSR only, cannot upgrade directly"
+  },
+  {
+    "path": "node_modules/mousetrap/tests",
+    "justification": "Test fixture only - jquery 1.7.2 is not used in production"
+  }
 ]
