@@ -1,0 +1,21 @@
+name: Retire.js Security Scan
+on: [push, pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: [actions/checkout@v4](https://github.com)
+
+      - name: Setup Node.js
+        uses: [actions/setup-node@v4](https://github.com)
+        with:
+          node-version: '20'
+
+      - name: Install Retire.js
+        run: npm install -g retire
+
+      - name: Run Retire.js Scan
+        # Scans the current directory for vulnerabilities
+        run: retire
