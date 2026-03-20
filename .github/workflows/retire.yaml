@@ -1,0 +1,30 @@
+name: RetireJS
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  retirejs:
+    name: Scan for Vulnerable JavaScript Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install RetireJS
+        run: npm install -g retire
+
+      - name: Run RetireJS scan
+        run: retire --path . --ignorefile .retireignore.json
