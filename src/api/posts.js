@@ -688,3 +688,12 @@ postsAPI.changeOwner = async function (caller, data) {
 
 	await Promise.all(logs);
 };
+
+postsAPI.translate = async function (caller, data) {
+	const postData = await posts.getPostField(data.pid, 'content');
+	return {
+		translated: true,
+		content: 'This is a hardcoded translation for now.',
+		original: postData,
+	};
+};
