@@ -53,4 +53,6 @@ module.exports = function () {
 	router.all('/+byIndex/:index*?', [middleware.checkRequired.bind(null, ['tid'])], controllers.write.posts.redirectByIndex);
 
 	return router;
+	setupApiRoute(router, 'post', '/:pid/translate', [middleware.assert.post], controllers.write.posts.translate);
+
 };

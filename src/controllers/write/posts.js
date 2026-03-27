@@ -218,3 +218,8 @@ Posts.changeOwner = async (req, res) => {
 	});
 	helpers.formatApiResponse(200, res);
 };
+
+Posts.translate = async (req, res) => {
+	const result = await api.posts.translate(req, { pid: req.params.pid });
+	helpers.formatApiResponse(200, res, result);
+};
