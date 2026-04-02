@@ -708,7 +708,7 @@ postsAPI.translate = async function (caller, data) {
 		console.log('[translate] Flask result:', JSON.stringify(result));
 	} catch (err) {
 		console.error('[translate] Error:', err.message);
-		throw new Error('[[error:translation-service-unavailable]]');
+		return { translated: false, content: postData, original: postData };
 	}
 
 	return {
