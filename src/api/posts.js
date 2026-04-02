@@ -694,17 +694,20 @@ postsAPI.translate = async function (caller, data) {
 
 	let result;
 	try {
+		console.log('[translate] Calling Flask with content:', postData);
 		const response = await fetch('http://localhost:5001/translate', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ content: postData }),
-			signal: AbortSignal.timeout(30000),
 		});
+		console.log('[translate] Flask response status:', response.status);
 		if (!response.ok) {
 			throw new Error(`Microservice returned status ${response.status}`);
 		}
 		result = await response.json();
+		console.log('[translate] Flask result:', JSON.stringify(result));
 	} catch (err) {
+		console.error('[translate] Error:', err.message);
 		throw new Error('[[error:translation-service-unavailable]]');
 	}
 

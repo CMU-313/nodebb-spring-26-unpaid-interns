@@ -305,8 +305,11 @@ define('forum/topic/postTools', [
 			}
 
 			btn.prop('disabled', true);
+			const loadingEl = $('<p class="text-muted"><i class="fa fa-spinner fa-spin"></i> Translating... this may take a few minutes</p>');
+			contentEl.append(loadingEl);
 			try {
 				const result = await api.post(`/posts/${encodeURIComponent(pid)}/translate`, {});
+				loadingEl.remove();
 				if (result && result.translated && result.content) {
 					contentEl.attr('data-original-html', contentEl.html());
 					contentEl.attr('data-translated', 'true');
@@ -322,6 +325,7 @@ define('forum/topic/postTools', [
 					});
 				}
 			} catch (err) {
+				loadingEl.remove();
 				alerts.error(err);
 			} finally {
 				btn.prop('disabled', false);

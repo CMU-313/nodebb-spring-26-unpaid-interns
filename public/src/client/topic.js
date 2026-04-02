@@ -80,15 +80,45 @@ define('forum/topic', [
 	};
 
 	function configurePostToggle() {
-		$('.topic').on('click', '.view-translated-btn', function () {
-			// Toggle the visibility of the next .translated-content div
-			$(this).closest('.sensitive-content-message').next('.translated-content').toggle();
-			// Optionally, change the button text based on visibility
-			var isVisible = $(this).closest('.sensitive-content-message').next('.translated-content').is(':visible');
-			if (isVisible) {
-				$(this).text('Hide the translated message.');
-			} else {
-				$(this).text('Click here to view the translated message.');
+		$('.topic').on('click', '.view-translated-btn', async function () {
+			const btn = $(this);
+			const postEl = btn.closest('[data-pid]');
+			const pid = postEl.attr('data-pid');
+			const contentEl = postEl.find('[component="post/content"]');
+
+			if (contentEl.attr('data-translated') === 'true') {
+				contentEl.html(contentEl.attr('data-original-html'));
+				contentEl.removeAttr('data-translated');
+				btn.text('Click here to view the translated message.');
+				return;
+			}
+
+			btn.prop('disabled', true);
+			btn.text('Translating... this may take a few minutes');
+			try {
+				const result = await fetch(config.relative_path + '/api/v3/posts/' + pid + '/translate', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json', 'x-csrf-token': config.csrf_token },
+					body: JSON.stringify({}),
+				});
+				const data = await result.json();
+				if (data.status && data.status.code === 'ok' && data.response) {
+					if (data.response.translated && data.response.content) {
+						contentEl.attr('data-original-html', contentEl.html());
+						contentEl.attr('data-translated', 'true');
+						contentEl.html('<p>' + $('<div>').text(data.response.content).html() + '</p>');
+						btn.text('Hide the translated message.');
+					} else {
+						btn.text('Post is already in English.');
+						setTimeout(function () { btn.text('Click here to view the translated message.'); }, 3000);
+					}
+				} else {
+					btn.text('Translation failed. Click to retry.');
+				}
+			} catch (err) {
+				btn.text('Translation failed. Click to retry.');
+			} finally {
+				btn.prop('disabled', false);
 			}
 		});
 	}
