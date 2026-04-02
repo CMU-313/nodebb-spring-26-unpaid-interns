@@ -691,9 +691,26 @@ postsAPI.changeOwner = async function (caller, data) {
 
 postsAPI.translate = async function (caller, data) {
 	const postData = await posts.getPostField(data.pid, 'content');
+
+	let result;
+	try {
+		const response = await fetch('http://localhost:5001/translate', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ content: postData }),
+			signal: AbortSignal.timeout(30000),
+		});
+		if (!response.ok) {
+			throw new Error(`Microservice returned status ${response.status}`);
+		}
+		result = await response.json();
+	} catch (err) {
+		throw new Error('[[error:translation-service-unavailable]]');
+	}
+
 	return {
-		translated: true,
-		content: 'This is a hardcoded translation for now.',
+		translated: !result.is_english,
+		content: result.translated_content,
 		original: postData,
 	};
 };

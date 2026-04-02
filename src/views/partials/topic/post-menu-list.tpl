@@ -125,6 +125,14 @@
 	</li>
 {{{ end }}}
 
+{{{ if config.loggedIn }}}
+<li>
+	<a class="dropdown-item rounded-1 d-flex align-items-center gap-2" component="post/translate" role="menuitem" href="#">
+		<span class="menu-icon"><i class="fa fa-fw text-secondary fa-language"></i></span> [[topic:translate]]
+	</a>
+</li>
+{{{ end }}}
+
 {{{ if posts.display_flag_tools }}}
 <li class="dropdown-divider"></li>
 
