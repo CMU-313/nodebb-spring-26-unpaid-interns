@@ -691,9 +691,29 @@ postsAPI.changeOwner = async function (caller, data) {
 
 postsAPI.translate = async function (caller, data) {
 	const postData = await posts.getPostField(data.pid, 'content');
+
+	let result;
+	try {
+		console.log('[translate] Calling Flask with content:', postData);
+		const response = await fetch('http://localhost:5001/translate', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ content: postData }),
+		});
+		console.log('[translate] Flask response status:', response.status);
+		if (!response.ok) {
+			throw new Error(`Microservice returned status ${response.status}`);
+		}
+		result = await response.json();
+		console.log('[translate] Flask result:', JSON.stringify(result));
+	} catch (err) {
+		console.error('[translate] Error:', err.message);
+		return { translated: false, content: postData, original: postData };
+	}
+
 	return {
-		translated: true,
-		content: 'This is a hardcoded translation for now.',
+		translated: !result.is_english,
+		content: result.translated_content,
 		original: postData,
 	};
 };

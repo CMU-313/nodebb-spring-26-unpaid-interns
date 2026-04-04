@@ -289,6 +289,49 @@ define('forum/topic/postTools', [
 		postContainer.on('click', '[component="post/chat"]', function () {
 			openChat($(this));
 		});
+
+		postContainer.on('click', '[component="post/translate"]', async function () {
+			const btn = $(this);
+			const pid = getData(btn, 'data-pid');
+			const postEl = btn.parents('[data-pid]');
+			const contentEl = postEl.find('[component="post/content"]');
+
+			// If already translated, toggle back to original
+			if (contentEl.attr('data-translated') === 'true') {
+				contentEl.html(contentEl.attr('data-original-html'));
+				contentEl.removeAttr('data-translated');
+				contentEl.removeAttr('data-original-html');
+				return false;
+			}
+
+			btn.prop('disabled', true);
+			const loadingEl = $('<p class="text-muted"><i class="fa fa-spinner fa-spin"></i> Translating... this may take a few minutes</p>');
+			contentEl.append(loadingEl);
+			try {
+				const result = await api.post(`/posts/${encodeURIComponent(pid)}/translate`, {});
+				loadingEl.remove();
+				if (result && result.translated && result.content) {
+					contentEl.attr('data-original-html', contentEl.html());
+					contentEl.attr('data-translated', 'true');
+					const escaped = $('<div>').text(result.content).html();
+					contentEl.html('<p>' + escaped + '</p>');
+				} else if (result && !result.translated) {
+					alerts.alert({
+						alert_id: 'translate_' + pid,
+						title: '[[topic:translate]]',
+						message: '[[topic:already-english]]',
+						type: 'info',
+						timeout: 5000,
+					});
+				}
+			} catch (err) {
+				loadingEl.remove();
+				alerts.error(err);
+			} finally {
+				btn.prop('disabled', false);
+			}
+			return false;
+		});
 	}
 
 	async function onReplyClicked(button, tid) {

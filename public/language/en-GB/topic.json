@@ -46,6 +46,10 @@
 	"copy-ip": "Copy IP",
 	"ban-ip": "Ban IP",
 	"view-history": "Edit History",
+	"translate": "Translate",
+	"show-original": "Show Original",
+	"already-english": "This post is already in English.",
+	"translation-failed": "Translation failed. Please try again later.",
 
 	"wrote-ago": "wrote <a href=\"%1\" class=\"timeago text-muted\" title=\"%2\"></a>",
 	"wrote-on": "wrote on <a href=\"%1\" class=\"timeago text-muted\" title=\"%2\"></a>",
