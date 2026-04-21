@@ -1,5 +1,6 @@
 {
     "defaults": {
+        "url": "http://17313-team03.s3d.cmu.edu:4567",
         "mongo": {
             "host": "mongo",
             "port": 27017,
