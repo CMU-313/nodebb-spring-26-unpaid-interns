@@ -34,3 +34,4 @@ jobs:
             git pull origin main
             docker compose down
             docker compose -f docker-compose-redis.yml up --build -d
+            docker compose -f docker-compose-redis.yml exec -T nodebb node scripts/seed-hindi-post.js
